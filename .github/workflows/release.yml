@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'charts/**'
+  workflow_dispatch:  # This enables the "Run workflow" button
 
 jobs:
   release:
@@ -34,23 +35,55 @@ jobs:
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
 
+      - name: Check if gh-pages branch exists
+        id: check-branch
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create gh-pages branch if it doesn't exist
+        if: steps.check-branch.outputs.exists == 'false'
+        run: |
+          git checkout --orphan gh-pages
+          git rm -rf .
+          # Create a simple index.html
+          cat > index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Vespa Helm Charts</title>
+            <style>
+              body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+              .code { background: #f4f4f4; padding: 10px; border-radius: 5px; font-family: monospace; }
+            </style>
+          </head>
+          <body>
+            <h1>🚀 Vespa Helm Charts Repository</h1>
+            <p>Add this repository to Helm:</p>
+            <div class="code">helm repo add vespa https://walmartlabs.github.io/vespa-helm</div>
+            <p>Install Vespa:</p>
+            <div class="code">helm install my-vespa vespa/vespa</div>
+            <p><a href="https://github.com/walmartlabs/vespa-helm">📚 Documentation</a></p>
+          </body>
+          </html>
+          EOF
+          # Create initial index.yaml
+          cat > index.yaml << 'EOF'
+          apiVersion: v1
+          entries: {}
+          generated: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          EOF
+          git add index.html index.yaml
+          git commit -m "Initial gh-pages commit"
+          git push origin gh-pages
+          git checkout main
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         with:
           charts_dir: charts
-          config: .github/cr.yaml
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          CR_GENERATE_RELEASE_NOTES: true
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .cr-release-packages
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
