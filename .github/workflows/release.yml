@@ -29,9 +29,29 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
-        with:
-          charts_dir: charts
+      - name: Install chart-releaser
+        run: |
+          wget https://github.com/helm/chart-releaser/releases/download/v1.6.1/chart-releaser_1.6.1_linux_amd64.tar.gz
+          tar -xzf chart-releaser_1.6.1_linux_amd64.tar.gz
+          sudo mv cr /usr/local/bin/cr
+
+      - name: Package charts
+        run: |
+          mkdir -p .cr-release-packages
+          for chart in charts/*; do
+            if [[ -d "$chart" ]]; then
+              helm package "$chart" --destination .cr-release-packages
+            fi
+          done
+
+      - name: Upload charts to GitHub releases
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          cr upload -o walmartlabs -r vespa-helm -c "$(git rev-parse HEAD)" --skip-existing
+
+      - name: Update index and push to gh-pages
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          cr index -o walmartlabs -r vespa-helm -c "$(git rev-parse HEAD)" --push --index-path index.yaml
