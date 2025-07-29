@@ -69,6 +69,8 @@ The workflow will automatically run when you push changes to charts, but you can
 
 **Note**: If you don't see the "Run workflow" button, ensure the updated workflow file with `workflow_dispatch` trigger has been pushed to the repository.
 
+**Important**: If you see "Nothing to do. No chart changes detected" but no `gh-pages` branch was created, increment the chart version in `charts/vespa/Chart.yaml` (e.g., from `0.1.0` to `0.1.1`) and run the workflow again.
+
 ### 5. Verify Setup
 After the workflow completes:
 
@@ -99,6 +101,13 @@ After the workflow completes:
    - Chart metadata is modified
 
 ## Troubleshooting
+
+### "Nothing to do. No chart changes detected"
+This happens when the chart version hasn't changed since the last release. To fix:
+1. Edit `charts/vespa/Chart.yaml`
+2. Increment the version (e.g., `0.1.0` → `0.1.1`)
+3. Commit and push the change
+4. Run the workflow again
 
 ### Workflow Fails
 - Check that GitHub Actions have write permissions
