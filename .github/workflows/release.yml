@@ -35,23 +35,56 @@ jobs:
           tar -xzf chart-releaser_1.6.1_linux_amd64.tar.gz
           sudo mv cr /usr/local/bin/cr
 
-      - name: Package charts
+      - name: Check if gh-pages branch exists
+        id: check-branch
         run: |
-          mkdir -p .cr-release-packages
-          for chart in charts/*; do
-            if [[ -d "$chart" ]]; then
-              helm package "$chart" --destination .cr-release-packages
-            fi
-          done
+          if git ls-remote --exit-code --heads origin gh-pages; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Upload charts to GitHub releases
+      - name: Create gh-pages branch if it doesn't exist
+        if: steps.check-branch.outputs.exists == 'false'
+        run: |
+          git checkout --orphan gh-pages
+          git rm -rf .
+          # Create a simple index.html
+          cat > index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Vespa Helm Charts</title>
+            <style>
+              body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+              .code { background: #f4f4f4; padding: 10px; border-radius: 5px; font-family: monospace; }
+            </style>
+          </head>
+          <body>
+            <h1>🚀 Vespa Helm Charts Repository</h1>
+            <p>Add this repository to Helm:</p>
+            <div class="code">helm repo add vespa https://walmartlabs.github.io/vespa-helm</div>
+            <p>Install Vespa:</p>
+            <div class="code">helm install my-vespa vespa/vespa</div>
+            <p><a href="https://github.com/walmartlabs/vespa-helm">📚 Documentation</a></p>
+          </body>
+          </html>
+          EOF
+          # Create initial index.yaml
+          cat > index.yaml << 'EOF'
+          apiVersion: v1
+          entries: {}
+          generated: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          EOF
+          git add index.html index.yaml
+          git commit -m "Initial gh-pages commit"
+          git push origin gh-pages
+          git checkout main
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        with:
+          charts_dir: charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
-          cr upload -o walmartlabs -r vespa-helm -c "$(git rev-parse HEAD)" --skip-existing
 
-      - name: Update index and push to gh-pages
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
-          cr index -o walmartlabs -r vespa-helm -c "$(git rev-parse HEAD)" --push --index-path index.yaml
