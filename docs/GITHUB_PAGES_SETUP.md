@@ -63,9 +63,11 @@ The workflow will automatically run when you push changes to charts, but you can
 
 1. Go to **Actions** tab
 2. Select **Release Charts** workflow (this should now be visible after pushing the workflow files)
-3. Click **Run workflow**
+3. Click **Run workflow** button (this appears because of the `workflow_dispatch` trigger)
 4. Choose the `main` branch
 5. Click **Run workflow**
+
+**Note**: If you don't see the "Run workflow" button, ensure the updated workflow file with `workflow_dispatch` trigger has been pushed to the repository.
 
 ### 5. Verify Setup
 After the workflow completes:
