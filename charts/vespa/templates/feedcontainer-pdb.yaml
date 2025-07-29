@@ -1,0 +1,18 @@
+{{- if .Values.feedcontainer.pdb.enabled -}}
+  {{- if ( gt ( int .Values.feedcontainer.replicas ) 1 ) -}}
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.deployEnv }}-feed-pdb
+spec:
+  minAvailable: {{ include "pdbMinPods" ( list .Values.feedcontainer.replicas .Values.feedcontainer.pdb.thresholds.minPodsPercentage .Values.feedcontainer.pdb.thresholds.minPodsCount ) }}
+  selector:
+    matchLabels:
+      app: feed
+  {{- end -}}
+{{- end -}}

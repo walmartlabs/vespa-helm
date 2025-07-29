@@ -1,0 +1,243 @@
+---
+templates:
+  - configserver.yaml
+tests:
+### Tests for the common configuration
+  - it: configserver configuration should be valid
+    values:
+      - ./values/common-values.yaml
+      - ./values/configserver-values.yaml
+    asserts:
+      #Testing the first document
+      - equal:
+          path: metadata.name
+          value: config
+        documentIndex: 0
+      - equal:
+          path: metadata.labels.app
+          value: config
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: cf-port-1
+            port: 19071
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: cf-port-2
+            port: 19070
+        documentIndex: 0
+      - equal:
+          path: spec.selector.app
+          value: config
+        documentIndex: 0
+      - isKind:
+          of: Service
+        documentIndex: 0          
+      #Testing the second document
+      - equal:
+          path: metadata.name
+          value: config-hs
+        documentIndex: 1
+      - equal:
+          path: metadata.labels.app
+          value: config-hs
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: cf-port-1
+            port: 19071
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: cf-port-2
+            port: 19070
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: cf-port-3
+            port: 19050
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: metrics-0
+            port: 19092
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: zk-client
+            port: 2181
+        documentIndex: 1        
+      - contains:
+          path: spec.ports
+          content:
+            name: zk-quorum
+            port: 2182
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: zk-election
+            port: 2183
+        documentIndex: 1   
+      - equal:
+          path: spec.selector.app
+          value: config
+        documentIndex: 1
+      - isKind:
+          of: Service
+        documentIndex: 1
+      #Testing the third document  
+      - equal:
+          path: metadata.name
+          value: config
+        documentIndex: 2
+      - equal:
+          path: metadata.labels.app
+          value: config
+        documentIndex: 2
+      - equal:
+          path: spec.updateStrategy.type
+          value: RollingUpdate
+        documentIndex: 2
+      - equal:
+          path: spec.podManagementPolicy
+          value: OrderedReady
+        documentIndex: 2
+      - equal:
+          path: spec.replicas
+          value: 3
+        documentIndex: 2
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: config
+        documentIndex: 2
+      - equal:
+          path: spec.serviceName
+          value: config-hs
+        documentIndex: 2
+      - equal:
+          path: spec.template.metadata.labels.app
+          value: config
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity
+          value: 
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchExpressions:
+                      - key: app
+                        operator: In
+                        values:
+                          - config
+                  topologyKey: "kubernetes.io/hostname"
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 999
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 996
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup 
+          value: 996
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: config
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.io/vespaengine/vespa:8.319.9"
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: VESPA_CONFIGSERVERS
+            value: config-0.config-hs.vespa-ns.svc.cluster.local,config-1.config-hs.vespa-ns.svc.cluster.local,config-2.config-hs.vespa-ns.svc.cluster.local
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: VESPA_CONFIGSERVER_JVMARGS
+            value: "-Xms2048m -Xmx2048m -Dsun.net.inetaddr.ttl=0"
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: VESPA_CONFIGPROXY_JVMARGS
+            value: "-XX:+UseContainerSupport -XX:+PreferContainerQuotaForCPUCount -Dsun.net.inetaddr.ttl=0 -XX:+UseG1GC"
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: cf-port-1
+            containerPort: 19071
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: cf-port-2
+            containerPort: 19070
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: cf-port-3
+            containerPort: 19050
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: metrics-0
+            containerPort: 19092
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: zk-client
+            containerPort: 2181
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: zk-quorum
+            containerPort: 2182
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: zk-election
+            containerPort: 2183
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits
+          value:
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests
+          value:
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 2
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 20Gi
+        documentIndex: 2        
+      - equal:
+          path: spec.volumeClaimTemplates[1].spec.resources.requests.storage
+          value: 20Gi
+        documentIndex: 2         

@@ -1,0 +1,13 @@
+---
+feedcontainer:
+  replicas: 4
+  ports:
+    port1: 8080
+  resources:
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi

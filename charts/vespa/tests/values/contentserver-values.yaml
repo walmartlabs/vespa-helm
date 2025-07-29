@@ -1,0 +1,20 @@
+---
+contentserver:
+  replicas: 4
+  ports:
+    port1: 19107
+  resources:
+    volume:
+      data: 100Gi
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 3
+      minPodsPercentage: 80%

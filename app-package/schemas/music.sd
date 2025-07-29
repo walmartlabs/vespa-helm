@@ -1,0 +1,23 @@
+schema music {
+
+    document music {
+
+        field artist type string {
+            indexing: summary | index
+        }
+
+        field album type string {
+            indexing: summary | index
+        }
+
+        field year type int {
+            indexing: summary | attribute
+        }
+
+        field category_scores type tensor<float>(cat{}) {
+            indexing: summary | attribute
+        }
+
+    }
+
+}

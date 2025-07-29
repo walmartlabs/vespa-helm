@@ -1,0 +1,109 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: feed
+  labels:
+    app: feed
+spec:
+  ports:
+    - name: feed-port-1
+      port: {{ .Values.feedcontainer.ports.port1 }}  
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: feed
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: feed-hs
+  labels:
+    app: feed-hs
+spec:
+  clusterIP: None
+  ports:
+    - name: feed-port-1
+      port: {{ .Values.feedcontainer.ports.port1 }}  
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: feed
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: feed
+  labels:
+    app: feed
+spec:
+  replicas: {{ .Values.feedcontainer.replicas }}
+  selector:
+    matchLabels:
+      app: feed
+  serviceName: feed-hs
+  template:
+    metadata:
+      labels:
+        app: feed
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.vespa.uid }}
+        runAsGroup: {{ .Values.vespa.gid }}
+        fsGroup: {{ .Values.vespa.gid }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - feed
+                topologyKey: "kubernetes.io/hostname"
+      {{ if .Values.feedcontainer.resources.memoryStorageLimit -}}
+      volumes:
+        - name: memory-storage
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.feedcontainer.resources.memoryStorageLimit }}
+      {{- end }}
+      containers:
+        - name: feed
+          image: "{{ .Values.vespa.container.image }}:{{ .Values.vespa.container.tag }}"
+          args: ["services"]
+          env:
+            - name: VESPA_LOG_STDOUT
+              value: "true"
+            - name: VESPA_UNPRIVILEGED
+              value: "yes"
+            - name: VESPA_CONFIGSERVERS
+              value: {{ include "vespaConfigServers" . }}
+            - name: VESPA_CONFIGPROXY_JVMARGS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+          ports:
+            - name: feed-port-1
+              containerPort: {{ .Values.feedcontainer.ports.port1 }}  
+            {{- include "metricsPorts" (list . "pod" ) | indent 12 }}
+          resources:
+            limits: {{ toYaml .Values.feedcontainer.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.feedcontainer.resources.pod.requests | nindent 14 }}
+          {{ if .Values.feedcontainer.resources.memoryStorageLimit -}}
+          volumeMounts:
+            - mountPath: /opt/vespa/var
+              name: memory-storage
+          {{- end -}}

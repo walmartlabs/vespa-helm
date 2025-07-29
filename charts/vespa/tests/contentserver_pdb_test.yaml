@@ -1,0 +1,47 @@
+---
+templates:
+  - contentserver-pdb.yaml
+tests:
+### Tests for the common configuration
+  - it: contentserver PDB configuration % based
+    values:
+      - ./values/common-values.yaml
+      # taking the base values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-content-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: content
+      - equal:
+          path: spec.minAvailable
+          value: 80%
+  - it: contentserver PDB configuration should be euqal to 3
+    values:
+      - ./values/common-values.yaml
+      - ./values/contentserver-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-content-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: content
+      - equal:
+          path: spec.minAvailable
+          value: 3
+  - it: contentserver PDB configuration should be equal to minAvailable
+    values:
+      - ./values/common-values.yaml
+      - ./values/contentserver-pdb-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-content-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: content
+      - equal:
+          path: spec.minAvailable
+          value: 2

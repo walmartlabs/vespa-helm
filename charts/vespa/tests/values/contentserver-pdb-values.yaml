@@ -1,0 +1,8 @@
+---
+contentserver:
+  replicas: 5
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 2
+      minPodsPercentage: 50%

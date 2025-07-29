@@ -1,0 +1,18 @@
+---
+querycontainer:
+  replicas: 3
+  ports:
+    port1: 8080
+  resources:
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 2
+      minPodsPercentage: 60%

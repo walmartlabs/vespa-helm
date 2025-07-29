@@ -1,0 +1,47 @@
+---
+templates:
+  - slobrok-pdb.yaml
+tests:
+### Tests for the common configuration
+  - it: slobrok PDB configuration should be 1
+    values:
+      - ./values/common-values.yaml
+      # taking the base values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-slobrok-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: slobrok
+      - equal:
+          path: spec.minAvailable
+          value: 1
+  - it: slobrok PDB configuration should be euqal to 3
+    values:
+      - ./values/common-values.yaml
+      - ./values/slobrok-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-slobrok-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: slobrok
+      - equal:
+          path: spec.minAvailable
+          value: 3
+  - it: slobrok PDB configuration should be equal to % based
+    values:
+      - ./values/common-values.yaml
+      - ./values/slobrok-pdb-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-slobrok-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: slobrok
+      - equal:
+          path: spec.minAvailable
+          value: 50%

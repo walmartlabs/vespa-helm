@@ -1,0 +1,36 @@
+{{ if .Values.vispana.virtualService.enabled }}
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  labels:
+    app: {{ .Values.clusterName }}-vespa
+    version: v1
+  name: gateway-vispana-{{ .Values.clusterName }}-vespa
+  namespace: {{ .Values.namespace }}
+spec:
+  selector: {{ toYaml .Values.istio.vispana.ingressGatewayLabelSelector | nindent 4 }}
+  servers:
+    - hosts:
+        - vispana-{{ include "dnsHostname" . }}
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: {{ .Values.istio.httpsRedirect }}
+    - hosts:
+        - vispana-{{ include "dnsHostname" . }}
+      port:
+        name: https-gateway-{{ .Values.clusterName }}-vespa
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: {{ if .Values.istio.credentialName }}{{ .Values.istio.credentialName }}{{ else }}{{ include "dnsHostname" . }}{{ end }}
+        minProtocolVersion: TLSV1_2
+        mode: SIMPLE
+{{ end }}

@@ -1,0 +1,85 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin
+  labels:
+    app: admin
+spec:
+  ports:
+    - name: admin-port-2
+      port: 19098
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    configserver: admin
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-hs
+  labels:
+    app: admin-hs
+spec:
+  clusterIP: None
+  ports:
+    - name: admin-port-2
+      port: 19098
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: admin
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: admin
+  labels:
+    app: admin
+spec:
+  replicas: {{ .Values.adminserver.replicas }}
+  selector:
+    matchLabels:
+      app: admin
+  serviceName: admin-hs
+  template:
+    metadata:
+      labels:
+        app: admin
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.vespa.uid }}
+        runAsGroup: {{ .Values.vespa.gid }}
+        fsGroup: {{ .Values.vespa.gid }}
+      containers:
+        - name: admin
+          image: "{{ .Values.vespa.container.image }}:{{ .Values.vespa.container.tag }}"
+          args: ["services"]
+          env:
+            - name: VESPA_LOG_STDOUT
+              value: "true"
+            - name: VESPA_UNPRIVILEGED
+              value: "yes"
+            - name: VESPA_CONFIGSERVERS
+              value: {{ include "vespaConfigServers" . }}
+            - name: VESPA_CONFIGPROXY_JVMARGS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+          ports:
+            - name: admin-port-2
+              containerPort: 19098
+            {{- include "metricsPorts" (list . "pod" ) | indent 12 }}
+          resources:
+            limits: {{ toYaml .Values.adminserver.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.adminserver.resources.pod.requests | nindent 14 }}

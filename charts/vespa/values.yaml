@@ -1,0 +1,351 @@
+---
+namespace: vespa-ns
+clusterName: vespa-cluster
+deployEnv: dev
+dnsSuffix: k8s.companyname.net
+certNamespace: istio-custom
+
+istio:
+  httpsRedirect: true #globally true for security
+  configserver:
+    ingressGatewayLabelSelector: 
+      istio: ingressgateway
+      app: istio-ingressgateway
+  feedcontainer:
+    ingressGatewayLabelSelector: 
+      istio: ingressgateway
+      app: istio-ingressgateway
+  querycontainer:
+    ingressGatewayLabelSelector: 
+      istio: ingressgateway
+      app: istio-ingressgateway
+  vispana:
+    ingressGatewayLabelSelector: 
+      istio: ingressgateway
+      app: istio-ingressgateway
+
+#  credentialName: k8s-credential-name #must be in the istio-custom namespace
+
+persistentVolumeClaim:
+  storageClass: managed-premium
+
+metrics:
+  serviceMonitor:
+    enabled: true
+
+vespa:
+  globalPorts:
+    metricsProxy:
+      start: 19092
+      end: 19096 #needs to be +1 from where you expect to end
+  #user uid and group gid for additional security
+  uid: 1000
+  gid: 1000
+  readinessProbe:
+    httpGet:
+      path: /state/v1/health
+      port: 19092
+  livenessProbe:
+    httpGet:
+      path: /state/v1/health
+      port: 19092
+    failureThreshold: 3
+    initialDelaySeconds: 50
+    periodSeconds: 10
+
+  generalJavaOpts: "-XX:+UseContainerSupport -XX:+PreferContainerQuotaForCPUCount -Dsun.net.inetaddr.ttl=0 -XX:+UseG1GC"
+
+  container:
+    image: docker.io/vespaengine/vespa
+    tag: 8.319.9
+    
+  # This is to support field type change in schemas when experimeting in dev.
+  # This block should only be used when changing a field type in the schema
+  # until: should be TODAY + 1 day to allow the update to the field
+  validationOverride:
+    validationIds: 
+      field-type-change:
+        until: 2016-07-27
+      cluster-size-reduction:
+        until: 2016-07-27
+      tensor-type-change:
+        until: 2016-07-27
+
+  # queryProfiles:
+  #   query-profile-1: |
+  #     <query-profile id="MyProfile">
+  #         <field name="hits">20</field>
+  #         <field name="maxHits">2000</field>
+  #         <field name="unique">merchantid</field>
+  #     </query-profile>
+
+  schemas:
+    music:
+      replicas: 2
+      dedicatedContentNodes:
+        numberOfGroups: 2
+        totalContentNodes: 4
+      definition: |
+        schema music {
+
+            document music {
+
+                field artist type string {
+                    indexing: summary | index
+                }
+
+                field album type string {
+                    indexing: summary | index
+                }
+
+                field year type int {
+                    indexing: summary | attribute
+                }
+
+                field category_scores type tensor<float>(cat{}) {
+                    indexing: summary | attribute
+                }
+            }
+        }
+    movie:
+      replicas: 4
+      dedicatedContentNodes:
+        numberOfGroups: 4
+        totalContentNodes: 16
+      definition: |
+        schema movie {
+        
+            document movie {
+        
+                field actor type string {
+                    indexing: summary | index
+                }
+        
+                field year type int {
+                    indexing: summary | attribute
+                }
+        
+                field name type string {
+                    indexing: summary | index
+                }
+            }
+        }
+
+vispana:
+  container:
+    image: docker.io/vispana/vispana
+    tag: 1.4.0
+    imagePullPolicy: Always
+  replicas: 2
+  ports:
+    port1: 4000
+  resources:
+    pod:
+      requests:
+        cpu: 1
+        memory: 1024Mi
+      limits:
+        cpu: 1
+        memory: 1024Mi
+  virtualService:
+    enabled: true
+
+clustercontroller:
+  replicas: 2
+  updateStrategy: RollingUpdate
+  podManagementPolicy: OrderedReady
+  ports:
+    port1: 19071
+    http:
+      start: 19100
+      end: 19151 #needs to be +1 from where you expect to end - ideally 19900, but opening 800 ports causes problems with k8s
+  resources:
+    # java:
+    #   minHeap: 2048m
+    #   maxHeap: 2048m
+    pod:
+      requests:
+        cpu: 1
+        memory: 2048Mi
+      limits:
+        cpu: 1
+        memory: 2048Mi
+  virtualService:
+    enabled: false #default to false, since this shouldn't have to be exposed
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 1
+      minPodsPercentage: 50%
+
+slobrok:
+  replicas: 2
+  updateStrategy: RollingUpdate
+  podManagementPolicy: OrderedReady
+  ports:
+    port1: 19071
+    http:
+      start: 19100
+      end: 19151 #needs to be +1 from where you expect to end - ideally 19900, but opening 800 ports causes problems with k8s
+  resources:
+    # java:
+    #   minHeap: 2048m
+    #   maxHeap: 2048m
+    pod:
+      requests:
+        cpu: 1
+        memory: 2048Mi
+      limits:
+        cpu: 1
+        memory: 2048Mi
+  virtualService:
+    enabled: false #default to false, since this shouldn't have to be exposed
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 1
+      minPodsPercentage: 50%
+
+configserver:
+  replicas: 3
+  updateStrategy: RollingUpdate
+  podManagementPolicy: OrderedReady
+  ports:
+    port1: 19071
+  resources:
+    volume:
+      data: 20Gi
+      log: 20Gi
+    java:
+      minHeap: 2048m
+      maxHeap: 2048m
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+  virtualService:
+    enabled: false #default to false, since this shouldn't have to be exposed
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 2
+      minPodsPercentage: 50%
+
+adminserver:
+  replicas: 1
+  ports:
+    port1: 19092
+  resources:
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+
+feedcontainer:
+  jvmOptions: "-XX:+UseContainerSupport -XX:+PreferContainerQuotaForCPUCount  -Dsun.net.inetaddr.ttl=0"
+  gcOptions: "-XX:+UseG1GC"
+  replicas: 8
+  ports:
+    port1: 8080
+  resources:
+    jvmPercentage: 50
+    # memoryStorageLimit: 5Gi
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+  virtualService:
+    enabled: true
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 2
+      minPodsPercentage: 60%
+
+querycontainer:
+  jvmOptions: "-XX:+UseContainerSupport -XX:+PreferContainerQuotaForCPUCount -Dsun.net.inetaddr.ttl=0"
+  gcOptions: "-XX:+UseG1GC"
+  replicas: 6
+  ports:
+    port1: 8080
+  resources:
+    jvmPercentage: 50
+    # memoryStorageLimit: 2Gi
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+  virtualService:
+    enabled: true
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 1
+      minPodsPercentage: 60%
+
+contentserver:
+  tuning:
+    searchnode:
+      lidspace:
+        maxBloatFactor: 0.01
+      summaryCachePercentage: 5
+      removedDb:
+        pruneAge: 86400
+      requestthreads:
+        persearch: 1
+  proton:
+    resourceLimits:
+      disk: 0.875
+      memory: 0.99 #Vespa is dumb, and isn't cgroup aware, so it detects HOST memory, instead of container memory, increasing this since we have densly packed nodes
+  replicas: 20
+  ports:
+    port1: 19107
+    http:
+      start: 19100
+      end: 19151 #needs to be +1 from where you expect to end - ideally 19900, but opening 800 ports causes problems with k8s
+  resources:
+    volume: #increasing this to 512Gb given https://learn.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#premium-storage-disk-sizes to improve performance
+      data: 512Gi
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 1
+      minPodsPercentage: 80%
+
+appPackageJob:
+  container:
+    image: change-me/utility-helper
+    tag: 0.0.4
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 60
+  appZipDir: /tmp
+  user: 
+    uid: 1001 
+    gid: 5000
+  resources:
+    pod:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi

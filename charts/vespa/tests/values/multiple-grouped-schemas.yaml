@@ -1,0 +1,55 @@
+vespa:
+  schemas:
+    music:
+      replicas: 2
+      dedicatedContentNodes:
+        numberOfGroups: 1
+        totalContentNodes: 2
+      definition: |
+        schema music {
+          document music {
+            field artist type string {
+                indexing: summary | index
+            }
+
+            field album type string {
+                indexing: summary | index
+            }
+
+            field year type int {
+                indexing: summary | attribute
+            }
+
+            field category_scores type tensor<float>(cat{}) {
+                indexing: summary | attribute
+            }
+          }
+        }
+    music2:
+      replicas: 2
+      dedicatedContentNodes:
+        numberOfGroups: 1
+        totalContentNodes: 2
+      definition: |
+        schema music {
+          document music {
+            field artist type string {
+                indexing: summary | index
+            }
+
+            field album type string {
+                indexing: summary | index
+            }
+
+            field year type int {
+                indexing: summary | attribute
+            }
+
+            field category_scores type tensor<float>(cat{}) {
+                indexing: summary | attribute
+            }
+          }
+        }
+
+contentserver:
+  replicas: 4

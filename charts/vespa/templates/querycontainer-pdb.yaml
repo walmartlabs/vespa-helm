@@ -1,0 +1,18 @@
+{{- if .Values.querycontainer.pdb.enabled -}}
+  {{- if ( gt ( int .Values.querycontainer.replicas ) 1 ) -}}
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.deployEnv }}-query-pdb
+spec:
+  minAvailable: {{ include "pdbMinPods" ( list .Values.querycontainer.replicas .Values.querycontainer.pdb.thresholds.minPodsPercentage .Values.querycontainer.pdb.thresholds.minPodsCount ) }}
+  selector:
+    matchLabels: 
+      app: query
+  {{- end -}}
+{{- end -}}

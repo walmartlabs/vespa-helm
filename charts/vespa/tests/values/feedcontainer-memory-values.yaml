@@ -1,0 +1,4 @@
+---
+feedcontainer:
+  resources:
+    memoryStorageLimit: 100Gi

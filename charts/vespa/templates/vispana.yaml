@@ -1,0 +1,48 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vispana
+  labels:
+    app: vispana
+spec:
+  ports:
+    - name: vispana-port-1
+      port: {{ .Values.vispana.ports.port1 }}
+  selector:
+    app: vispana
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vispana
+  labels:
+    app: vispana
+spec:
+  replicas: {{ .Values.vispana.replicas }}
+  selector:
+    matchLabels:
+      app: vispana
+  template:
+    metadata:
+      labels:
+        app: vispana
+    spec:
+      containers:
+        - name: vispana
+          image: "{{ .Values.vispana.container.image }}:{{ .Values.vispana.container.tag }}"
+          imagePullPolicy: {{ .Values.vispana.container.imagePullPolicy }}
+          ports:
+            - name: vispana-port-1
+              containerPort: {{ .Values.vispana.ports.port1 }}
+          resources:
+            limits: {{ toYaml .Values.vispana.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.vispana.resources.pod.requests | nindent 14 }}

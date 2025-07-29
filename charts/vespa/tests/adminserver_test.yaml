@@ -1,0 +1,131 @@
+---
+templates:
+  - adminserver.yaml
+tests:
+### Tests for the common configuration
+  - it: admin configurations should be valid
+    values:
+      - ./values/common-values.yaml
+      - ./values/adminserver-values.yaml
+    asserts:
+    #Testing the first document
+      - equal:
+          path: metadata.name
+          value: admin
+        documentIndex: 0
+      - equal:
+          path: metadata.labels.app
+          value: admin
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: metrics-0
+            port: 19092
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: admin-port-2
+            port: 19098
+        documentIndex: 0
+      - equal:
+          path: spec.selector.configserver
+          value: admin
+        documentIndex: 0
+      - isKind:
+          of: Service
+        documentIndex: 0
+    #Testing the second document
+      - equal:
+          path: metadata.name
+          value: admin-hs
+        documentIndex: 1
+      - equal:
+          path: metadata.labels.app
+          value: admin-hs
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: metrics-0
+            port: 19092
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: admin-port-2
+            port: 19098
+        documentIndex: 1
+      - equal:
+          path: spec.selector.app
+          value: admin
+        documentIndex: 1
+      - isKind:
+          of: Service
+        documentIndex: 1
+    #Testing the third document
+      - equal:
+          path: metadata.name
+          value: admin
+        documentIndex: 2
+      - equal:
+          path: metadata.labels.app
+          value: admin
+        documentIndex: 2
+      - equal:
+          path: spec.replicas
+          value: 1
+        documentIndex: 2
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app: admin
+        documentIndex: 2
+      - equal:
+          path: spec.template.metadata.labels
+          value:
+            app: admin
+        documentIndex: 2
+      - isKind:
+          of: StatefulSet
+        documentIndex: 2
+      # Container section
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: admin
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.io/vespaengine/vespa:8.319.9"
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: VESPA_CONFIGSERVERS
+            value: config-0.config-hs.vespa-ns.svc.cluster.local,config-1.config-hs.vespa-ns.svc.cluster.local
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: metrics-0
+            containerPort: 19092
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: admin-port-2
+            containerPort: 19098
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits
+          value: 
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests
+          value:
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 2

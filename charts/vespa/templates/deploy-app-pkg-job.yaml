@@ -1,0 +1,68 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: app-package-job
+  annotations:
+    forceApply: {{ randAlphaNum 5 | quote }}
+  labels:
+    app: app-package-job
+spec:
+  activeDeadlineSeconds: {{ .Values.appPackageJob.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ .Values.appPackageJob.ttlSecondsAfterFinished }}
+  template:
+    spec:
+      containers:
+        - name: app-package-job
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args: ["{{ .Values.appPackageJob.appZipDir }}/prepare_activate.sh"]
+          securityContext:
+            runAsUser: {{ .Values.appPackageJob.user.uid }}
+            runAsGroup: {{ .Values.appPackageJob.user.gid }}
+            fsGroup: {{ .Values.appPackageJob.user.gid }}
+          resources:
+            limits: {{ toYaml .Values.appPackageJob.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.appPackageJob.resources.pod.requests | nindent 14 }}
+          volumeMounts:
+            - name: vespa-config
+              mountPath: {{ .Values.appPackageJob.appZipDir }}/prepare_activate.sh
+              subPath: prepare_activate.sh
+              readOnly: true
+            - name: vespa-config
+              mountPath: {{ .Values.appPackageJob.appZipDir }}/services.xml
+              subPath: services.xml
+              readOnly: true
+            - name: vespa-config
+              mountPath: {{ .Values.appPackageJob.appZipDir }}/hosts.xml
+              subPath: hosts.xml
+              readOnly: true
+            {{- if eq .Values.deployEnv "dev" }}
+            - name: vespa-config
+              mountPath: {{ .Values.appPackageJob.appZipDir }}/validation-overrides.xml
+              subPath: validation-overrides.xml
+              readOnly: true
+            {{- end }}
+          {{- range $schemaName, $schemaProperties := .Values.vespa.schemas }}
+            - name: vespa-config
+              mountPath: {{ $.Values.appPackageJob.appZipDir }}/schemas/{{ $schemaName }}.sd
+              subPath: {{ $schemaName }}.sd
+              readOnly: true
+          {{- end }}
+          {{- range $queryProfile, $queryProfileContent := .Values.vespa.queryProfiles }}
+            - name: vespa-config
+              mountPath: {{ $.Values.appPackageJob.appZipDir }}/search/query-profiles/{{ $queryProfile }}.xml
+              subPath: {{ $queryProfile }}.xml
+              readOnly: true
+          {{- end }}
+      volumes:
+        - name: vespa-config
+          configMap:
+            name: vespa
+      restartPolicy: Never
+  backoffLimit: 1
+

@@ -1,0 +1,55 @@
+---
+namespace: vespa-ns
+clusterName: vespa-ns-cluster
+deployEnv: dev
+dnsSuffix: k8s.companyname.net
+
+
+persistentVolumeClaim:
+  storageClass: some-disk-class
+
+vespa:
+  #user uid and group gid for additional security
+  uid: 999
+  gid: 996
+
+  container:
+    image: docker.io/vespaengine/vespa
+    tag: 8.319.9
+  appZipDir: /tmp
+
+  deploymentJob:
+    activeDeadlineSeconds: 600
+    ttlSecondsAfterFinished: 60
+
+  schemas:
+    music:
+      replicas: 2
+      definition: |
+        schema music {
+
+          document music {
+
+              field artist type string {
+                  indexing: summary | index
+              }
+
+              field album type string {
+                  indexing: summary | index
+              }
+
+              field year type int {
+                  indexing: summary | attribute
+              }
+
+              field category_scores type tensor<float>(cat{}) {
+                  indexing: summary | attribute
+              }
+
+          }
+
+        }
+
+
+configserver:
+  replicas: 2

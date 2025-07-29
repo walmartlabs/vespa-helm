@@ -1,0 +1,114 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: slobrok
+  labels:
+    app: slobrok
+spec:
+  publishNotReadyAddress: true
+  ports:
+    - name: slobrok-port-1
+      port: {{ .Values.slobrok.ports.port1 }}
+    - name: slobrok-port-2
+      port: 19070
+    - name: slobrok-port-3
+      port: 19050
+    {{- include "slobrokPorts" (list . "service" ) | indent 4 }}
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: slobrok
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: slobrok-hs
+  labels:
+    app: slobrok-hs
+spec:
+  publishNotReadyAddress: true
+  clusterIP: None
+  ports:
+    - name: slobrok-port-1
+      port: {{ .Values.slobrok.ports.port1 }}
+    - name: slobrok-port-2
+      port: 19070
+    - name: slobrok-port-3
+      port: 19050
+    {{- include "slobrokPorts" (list . "service" ) | indent 4 }}
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+    # https://github.com/vespa-engine/vespa/blob/master/configdefinitions/src/vespa/zookeeper-server.def
+  selector:
+    app: slobrok
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: slobrok
+  labels:
+    app: slobrok
+spec:
+  updateStrategy:
+    type: {{ .Values.slobrok.updateStrategy }}
+  podManagementPolicy: {{ .Values.slobrok.podManagementPolicy }}
+  replicas: {{ .Values.slobrok.replicas }}
+  selector:
+    matchLabels:
+      app: slobrok
+  serviceName: slobrok-hs
+  template:
+    metadata:
+      labels:
+        app: slobrok
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - slobrok
+                topologyKey: "kubernetes.io/hostname"
+      securityContext:
+        runAsUser: {{ .Values.vespa.uid }}
+        runAsGroup: {{ .Values.vespa.gid }}
+        fsGroup: {{ .Values.vespa.gid }}
+      containers:
+        - name: slobrok
+          image: "{{ .Values.vespa.container.image }}:{{ .Values.vespa.container.tag }}"
+          args: ["services"]
+          env:
+            - name: VESPA_LOG_STDOUT
+              value: "true"
+            - name: VESPA_UNPRIVILEGED
+              value: "yes"
+            - name: VESPA_CONFIGSERVERS
+              value: {{ include "vespaConfigServers" . }}
+            - name: VESPA_CONFIGPROXY_JVMARGS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+          ports:
+            - name: slobrok-port-1
+              containerPort: {{ .Values.slobrok.ports.port1 }}
+            - name: slobrok-port-2
+              containerPort: 19070
+            - name: slobrok-port-3
+              containerPort: 19050
+            {{- include "slobrokPorts" (list . "pod" ) | indent 12 }}
+            {{- include "metricsPorts" (list . "pod" ) | indent 12 }}
+          resources:
+            limits: {{ toYaml .Values.slobrok.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.slobrok.resources.pod.requests | nindent 14 }}

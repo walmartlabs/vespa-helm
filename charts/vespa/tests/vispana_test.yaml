@@ -1,0 +1,82 @@
+---
+templates:
+  - vispana.yaml
+tests:
+### Tests for the common configuration
+  - it: vispana configuration should be valid
+    values:
+      - ./values/common-values.yaml
+      - ./values/vispana-values.yaml
+    asserts:
+    #Testing the first document
+      - equal:
+          path: metadata.name
+          value: vispana
+        documentIndex: 0
+      - equal:
+          path: metadata.labels.app
+          value: vispana
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: vispana-port-1
+            port: 4000
+        documentIndex: 0
+      - equal:
+          path: spec.selector.app
+          value: vispana
+        documentIndex: 0
+      - isKind:
+          of: Service
+        documentIndex: 0
+    #Testing the first document
+      - equal:
+          path: metadata.name
+          value: vispana
+        documentIndex: 1
+      - equal:
+          path: metadata.labels.app
+          value: vispana
+        documentIndex: 1
+      - equal:
+          path: spec.replicas
+          value: 1
+        documentIndex: 1
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: vispana
+        documentIndex: 1
+      - equal:
+          path: spec.template.metadata.labels.app
+          value: vispana
+        documentIndex: 1
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: vispana
+        documentIndex: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/vispana/vispana:1.4.0
+        documentIndex: 1
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: vispana-port-1
+            containerPort: 4000
+        documentIndex: 1
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits
+          value: 
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 1
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests
+          value:
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 1
+      - isKind:
+          of: Deployment
+        documentIndex: 1

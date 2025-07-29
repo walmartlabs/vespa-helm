@@ -1,0 +1,26 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "dnsHostname" . }}
+  namespace: {{ .Values.certNamespace }}
+spec:
+  commonName: will-be-overwritten
+  duration: 8760h0m0s
+  renewBefore: 4380h0m0s
+  dnsNames:
+  - query-{{ include "dnsHostname" . }}
+  - feed-{{ include "dnsHostname" . }}
+  - vispana-{{ include "dnsHostname" . }}
+  - config-{{ include "dnsHostname" . }}
+  issuerRef:
+    group: security.companyname.com
+    kind: ClusterIssuer
+    name: cws-issuer
+  privateKey:
+    rotationPolicy: Always
+  secretName: {{ include "dnsHostname" . }}

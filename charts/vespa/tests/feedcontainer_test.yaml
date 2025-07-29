@@ -1,0 +1,163 @@
+---
+templates:
+  - feedcontainer.yaml
+tests:
+### Tests for the common configuration
+  - it: feedcontainer configuration should be valid
+    values:
+      - ./values/common-values.yaml
+      - ./values/feedcontainer-values.yaml
+    asserts:
+    #Testing the first document
+      - equal:
+          path: metadata.name
+          value: feed
+        documentIndex: 0
+      - equal:
+          path: metadata.labels.app
+          value: feed
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: feed-port-1
+            port: 8080
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: metrics-0
+            port: 19092
+        documentIndex: 0
+      - equal:
+          path: spec.selector.app
+          value: feed
+        documentIndex: 0
+      - isKind:
+          of: Service
+        documentIndex: 0
+    #Testing the second document
+      - equal:
+          path: metadata.name
+          value: feed-hs
+        documentIndex: 1
+      - equal:
+          path: metadata.labels.app
+          value: feed-hs
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: feed-port-1
+            port: 8080
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: metrics-0
+            port: 19092
+        documentIndex: 1
+      - equal:
+          path: spec.selector.app
+          value: feed
+        documentIndex: 1
+      - isKind:
+          of: Service
+        documentIndex: 1
+    #Testing the first document
+      - equal:
+          path: metadata.name
+          value: feed
+        documentIndex: 2
+      - equal:
+          path: metadata.labels.app
+          value: feed
+        documentIndex: 2
+      - equal:
+          path: spec.replicas
+          value: 4
+        documentIndex: 2
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: feed
+        documentIndex: 2
+      - equal:
+          path: spec.serviceName
+          value: feed-hs
+        documentIndex: 2
+      - equal:
+          path: spec.template.metadata.labels.app
+          value: feed
+        documentIndex: 2
+      - equal:
+          path: spec.template.metadata.labels.app
+          value: feed
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 999
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 996
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 996
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: feed
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/vespaengine/vespa:8.319.9
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: VESPA_CONFIGSERVERS
+            value: config-0.config-hs.vespa-ns.svc.cluster.local,config-1.config-hs.vespa-ns.svc.cluster.local
+        documentIndex: 2
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: feed-port-1
+            containerPort: 8080
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits
+          value: 
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests
+          value:
+            cpu: 2
+            memory: 4096Mi
+        documentIndex: 2
+      - isKind:
+          of: StatefulSet
+        documentIndex: 2
+### Testing the memory backed configurations
+  - it: feedcontainer memory emptyDir should render correctly
+    values:
+      - ./values/common-values.yaml
+      - ./values/feedcontainer-values.yaml
+      - ./values/feedcontainer-memory-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes
+          value: 
+            - name: memory-storage
+              emptyDir:
+                medium: Memory
+                sizeLimit: 100Gi
+        documentIndex: 2
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value: 
+            - mountPath: /opt/vespa/var
+              name: memory-storage
+        documentIndex: 2        

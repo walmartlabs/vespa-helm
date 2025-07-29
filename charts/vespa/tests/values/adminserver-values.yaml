@@ -1,0 +1,13 @@
+---
+adminserver:
+  replicas: 1
+  ports:
+    port1: 19092
+  resources:
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi

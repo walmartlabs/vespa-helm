@@ -1,0 +1,29 @@
+{{ if .Values.vispana.virtualService.enabled }}
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  labels:
+    app: vispana
+    version: v1
+  name: vs-vispana-{{ .Values.clusterName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  gateways:
+    - gateway-vispana-{{ .Values.clusterName }}-vespa
+  hosts:
+    - vispana-{{ include "dnsHostname" . }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: vispana
+            port:
+              number: {{ .Values.vispana.ports.port1 }}
+{{ end }}

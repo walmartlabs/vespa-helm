@@ -1,0 +1,28 @@
+---
+configserver:
+  replicas: 3
+  updateStrategy: RollingUpdate
+  podManagementPolicy: OrderedReady
+  ports:
+    port1: 19071
+  resources:
+    volume:
+      data: 20Gi
+      log: 20Gi
+    java:
+      minHeap: 2048m
+      maxHeap: 2048m
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi
+  virtualService:
+    enabled: true
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 2
+      minPodsPercentage: 50%

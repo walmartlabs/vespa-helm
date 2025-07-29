@@ -1,0 +1,47 @@
+---
+templates:
+  - querycontainer-pdb.yaml
+tests:
+### Tests for the common configuration
+  - it: querycontainer PDB configuration % based
+    values:
+      - ./values/common-values.yaml
+      # taking the base values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-query-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: query
+      - equal:
+          path: spec.minAvailable
+          value: 60%
+  - it: querycontainer PDB configuration should be euqal to 2
+    values:
+      - ./values/common-values.yaml
+      - ./values/querycontainer-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-query-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: query
+      - equal:
+          path: spec.minAvailable
+          value: 2
+  - it: querycontainer PDB configuration should be equal to minAvailable
+    values:
+      - ./values/common-values.yaml
+      - ./values/querycontainer-pdb-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-query-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: query
+      - equal:
+          path: spec.minAvailable
+          value: 3

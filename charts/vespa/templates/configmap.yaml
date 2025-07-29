@@ -1,0 +1,231 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vespa
+data:
+  hosts.xml: |-
+    <?xml version="1.0" encoding="utf-8" ?>
+    <hosts>
+      {{ include "vespaHosts" (list "config" .Values.configserver.replicas $) }}
+      {{ include "vespaHosts" (list "slobrok" .Values.slobrok.replicas $) }}
+      {{ include "vespaHosts" (list "cluster" .Values.clustercontroller.replicas $) }}
+      {{ include "vespaHosts" (list "admin" .Values.adminserver.replicas $) }}
+      {{ include "vespaHosts" (list "feed" .Values.feedcontainer.replicas $) }}
+      {{ include "vespaHosts" (list "query" .Values.querycontainer.replicas $) }}
+      {{ include "vespaHosts" (list "content" .Values.contentserver.replicas $) }}
+    </hosts>
+
+  services.xml: |-
+    <?xml version="1.0" encoding="utf-8" ?>
+
+    <services version="1.0" xmlns:deploy="vespa" xmlns:preprocess="properties">
+        <admin version="2.0">
+            <configservers>
+                {{- include "hostAliases" (list "configserver" "config" .Values.configserver.replicas $) }}
+            </configservers>
+            <cluster-controllers>
+                {{- include "hostAliases" (list "cluster-controller" "cluster" .Values.clustercontroller.replicas $) }}
+            </cluster-controllers>
+            <slobroks>
+                {{- include "hostAliases" (list "slobrok" "slobrok" .Values.slobrok.replicas $) }}
+            </slobroks>
+
+            {{- include "hostAliases" (list "adminserver" "admin" .Values.adminserver.replicas $) }}
+        </admin>
+
+        <container id="feed" version="1.0">
+
+            <document-api/>
+            <document-processing/>
+            <nodes>
+              <jvm gc-options={{ .Values.feedcontainer.gcOptions | quote }}
+                    options={{ .Values.feedcontainer.jvmOptions | quote }} 
+                    allocated-memory="{{ .Values.feedcontainer.resources.jvmPercentage }}%" />
+              {{- include "hostAliases" (list "node" "feed" .Values.feedcontainer.replicas $) }}
+            </nodes>
+        </container>
+
+        <container id="query" version="1.0">
+            <search/>
+            <nodes>
+              <jvm gc-options={{ .Values.querycontainer.gcOptions | quote }}
+                    options={{ .Values.querycontainer.jvmOptions | quote }} 
+                    allocated-memory="{{ .Values.querycontainer.resources.jvmPercentage }}%" />
+              {{- include "hostAliases" (list "node" "query" .Values.querycontainer.replicas $) }}
+            </nodes>
+        </container>
+    {{- $totalContentNodes := .Values.contentserver.replicas -}}
+    {{- $totalGroupedNodes := 0 }}
+    {{- $totalGroups := 0 }}
+
+    <!-- do validation loop first, and deal with things that have content node groups FIRST -->
+    {{- if (.Values.vespa).schemas -}}
+      {{- range $schemaName, $schemaProperties := .Values.vespa.schemas -}}
+        {{- if (($schemaProperties).dedicatedContentNodes) -}}
+          {{- $totalGroupedNodes = ( int ( add ( int $totalGroupedNodes ) ( int $schemaProperties.dedicatedContentNodes.totalContentNodes) ) ) -}}
+          {{- $totalGroups = int ( add ( int $totalGroups ) 1 ) }}
+        {{- end -}}
+      {{- end -}}
+      {{- if (gt (int $totalGroupedNodes) (int $totalContentNodes)) -}} <!-- validate that group totals doesn't violate total replicas -->
+        {{- fail "Node Alignment Validation Failure: More dedicated content nodes specified than total content node replicas! Adjust the totalContentNodes across grouped schema and the contentserver.replicas to fix this." }}
+      {{- end -}}
+      {{- if and ( gt ( len ( keys .Values.vespa.schemas ) | int ) (int $totalGroups ) ) ( gt (int $totalGroupedNodes) (sub ( int $totalContentNodes) 2 | int)) -}} <!-- validate that there are enough nodes left over for any ungrouped nodes -->
+        {{- fail "Node Alignment Validation Failure: Not enough ungrouped nodes are available for ungrouped schemas. Compare the number of totalContentNodes per schema and the total number of contentserver.replicas to fix this." }}
+      {{- end -}}
+
+      <!-- totalSchemas: {{ len ( keys .Values.vespa.schemas ) | int }} -->
+      <!-- totalGroupedNodes: {{ $totalGroupedNodes }} -->
+      <!-- totalGroups: {{ $totalGroups }} -->
+      <!-- totalContentNodes: {{ $totalContentNodes }} -->
+    {{- end -}}
+
+    <!-- do the work for the grouped nodes first so we know how many nodes are left for ungrouped schemas -->
+    <!-- setup a node index so we know where to being/end the distribution keys -->
+    {{- $nodeIndex := ( int 0 ) -}}
+    {{- $groupIndex := ( int 0) -}}
+  {{- range $schemaName, $schemaProperties := .Values.vespa.schemas }}
+        {{- if (($schemaProperties).dedicatedContentNodes) -}}
+        <!-- 8 indentions -->
+        {{- include "contentStart" (list $schemaName $schemaProperties) | nindent 8 }}
+            <group name="{{ $schemaName }}-{{ $groupIndex }}" distribution-key="{{ $groupIndex }}" >
+            {{- if (gt ( int $schemaProperties.dedicatedContentNodes.numberOfGroups ) 1) }} <!-- multiple groups needed -->
+                <distribution partitions="{{ range untilStep ( int 1 ) ( int $schemaProperties.replicas ) ( int 1 ) }}1|{{ end }}*" />
+                <!-- validate that the division of nodes is even amongst the groups, because we are lazy, and don't want to deal with remainders -->
+                {{- if eq ( mod ( int $schemaProperties.dedicatedContentNodes.totalContentNodes) ( int $schemaProperties.dedicatedContentNodes.numberOfGroups ) ) 0 }}
+                  {{- range $_, $subGroupIndex := untilStep 0 ( int $schemaProperties.dedicatedContentNodes.numberOfGroups ) 1 }}
+                    <group name="{{ $schemaName }}-{{ $groupIndex }}-{{ $subGroupIndex }}" distribution-key="{{ $subGroupIndex }}">
+                        <!-- these nodes and groupings should line up to the pod names -->
+                        {{- range untilStep (int $nodeIndex ) ( add (int $nodeIndex ) ( div ( int $schemaProperties.dedicatedContentNodes.totalContentNodes ) ( int $schemaProperties.dedicatedContentNodes.numberOfGroups ) | int ) | int ) 1  }} 
+                          <node hostalias="content-{{ . }}" distribution-key="{{ . }}" />
+                        {{- end }}
+                        {{- $nodeIndex = int ( add (int $nodeIndex ) ( div ( int $schemaProperties.dedicatedContentNodes.totalContentNodes ) ( $schemaProperties.dedicatedContentNodes.numberOfGroups ) | int ) ) }}
+                        <!-- node index {{ $nodeIndex }} -->
+                    </group>
+                  {{- end }}
+                {{- else }}
+                  {{- fail "The total number of content nodes (totalContentNodes) must be divisible by the number of groups specified (numberOfGroups) without any remainder." }}
+                {{- end -}}
+            {{- else }} <!-- single flat group needed -->
+               {{- range untilStep ( int $nodeIndex ) ( add ( int $nodeIndex ) ( int $schemaProperties.dedicatedContentNodes.totalContentNodes ) | int ) 1 }}
+                  <node hostalias="content-{{ . }}" distribution-key="{{ . }}" />
+                {{- end -}}
+
+                {{- $nodeIndex = int ( add (int $nodeIndex ) ( int $schemaProperties.dedicatedContentNodes.totalContentNodes ) ) }}
+            {{- end }}
+            </group>
+        {{- include "contentEnd" (list $.Values $schemaName $schemaProperties ) | nindent 8 }}
+        <!-- increment the indexes -->
+        {{- $groupIndex = int ( add ( int $groupIndex ) 1 ) -}}
+        
+        {{- end -}}
+  {{- end }}
+    <!-- do the work for the non-grouped nodes -->
+  {{- range $schemaName, $schemaProperties := .Values.vespa.schemas }}
+        {{- if not (($schemaProperties).dedicatedContentNodes) -}}
+        <!-- 8 indentions -->
+        {{- include "contentStart" (list $schemaName $schemaProperties) | nindent 8 }}
+              <nodes>
+                {{- range untilStep (int $nodeIndex ) ( int $.Values.contentserver.replicas ) 1 }}
+                  <node hostalias="content-{{ . }}" distribution-key="{{ . }}" />
+                {{- end }}
+              </nodes>
+        {{- include "contentEnd" (list $.Values $schemaName $schemaProperties ) | nindent 8 }}
+        {{- end -}}
+  {{- end }}
+    </services>
+
+{{- range $schemaName, $schemaProperties := .Values.vespa.schemas }}
+  {{ $schemaName }}.sd: |- {{  $schemaProperties.definition | nindent 4 }}
+{{- end }}
+
+{{- if eq .Values.deployEnv "dev" }}
+  {{ if .Values.vespa.validationOverride }}
+  validation-overrides.xml: |-
+    <validation-overrides>
+      {{- range $idName, $idDate := .Values.vespa.validationOverride.validationIds }}
+      <allow until="{{ $idDate.until }}">{{ $idName }}</allow>
+      {{- end }}
+    </validation-overrides>
+  {{- end -}}
+{{- end }}
+
+  prepare_activate.sh: |-
+      #!/bin/bash
+      apk add --no-cache curl unzip;
+      declare -A ports
+      ports["config"]={{ .Values.configserver.ports.port1 }}
+      ports["feed"]={{ .Values.feedcontainer.ports.port1 }}
+      ports["query"]={{ .Values.querycontainer.ports.port1 }}
+
+      function checkHealth {
+        local host=$1
+        local service=`echo $host | cut -d '-' -f 1`
+        local healthUrl=$host:${ports[$service]}/state/v1/health
+        curl -s $healthUrl | grep code | grep -q up
+        status=$?
+      }
+
+      function waitForUpStatus {
+        grep "<host name" {{ .Values.appPackageJob.appZipDir }}/hosts.xml | sed 's/.*<host name="\(.*\)">$/\1/' | while read -r host
+        do
+          # check config servers only
+          if [[ $host == config-* ]]; then
+            checkHealth $host
+            while [ $status -ne 0 ]
+            do
+              echo "Waiting for host $host to be up..."
+              sleep 10
+              checkHealth $host
+            done
+            echo "$host is up"
+          fi
+        done
+      }
+
+      function zipApp {
+        cd {{ .Values.appPackageJob.appZipDir }}
+        echo "-- Validating the directory structure --"
+        ls -alR *
+        echo "-- Validation print complete -- "
+        {{ if eq .Values.deployEnv "dev" -}}
+        zip -q app.zip hosts.xml services.xml validation-overrides.xml schemas/* search/query-profiles/*
+        {{ else -}}
+        zip -q app.zip hosts.xml services.xml schemas/* search/query-profiles/*
+        {{- end -}}
+      }
+
+      function deployApp {
+        ls -l {{ .Values.appPackageJob.appZipDir }}/app.zip
+        # TODO: might have to verify tenant/application in vespa first before prepareandactivate
+        response=`curl -s --header Content-Type:application/zip --data-binary @{{ .Values.appPackageJob.appZipDir }}/app.zip config-hs.{{ $.Values.namespace }}.svc.cluster.local:{{ .Values.configserver.ports.port1 }}/application/v2/tenant/default/prepareandactivate`
+        
+        #Check the exit code
+        exitCheck=$?
+        if [ $exitCheck -ne 0 ]; then
+          echo "Error detected in response code"
+          echo "Response: ${response}"
+          exit 1
+        fi
+
+        #check the response itself for 'error-code'
+        if echo "$response" | grep -q "error-code"; then
+          echo "Error detected in response data"
+          echo "Response: ${response}"
+          exit 1
+        fi
+
+        exit 0
+      }
+
+      waitForUpStatus
+      zipApp
+      deployApp
+
+  {{ range $queryProfileName, $queryProfileContent := .Values.vespa.queryProfiles }}
+  {{ $queryProfileName }}.xml: |- {{ $queryProfileContent | nindent 4 }}
+  {{ end }}

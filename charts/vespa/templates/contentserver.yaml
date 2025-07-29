@@ -1,0 +1,108 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: content
+  labels:
+    app: content
+spec:
+  ports: 
+    {{- include "protonPorts" (list . "service" ) | indent 4 }}
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: content
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: content-hs
+  labels:
+    app: content-hs
+spec:
+  clusterIP: None
+  ports:
+    {{- include "protonPorts" (list . "service" ) | indent 4 }}
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: content
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: content
+  labels:
+    app: content
+spec:
+  replicas: {{ .Values.contentserver.replicas }}
+  selector:
+    matchLabels:
+      app: content
+  serviceName: content-hs
+  template:
+    metadata:
+      labels:
+        app: content
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.vespa.uid }}
+        runAsGroup: {{ .Values.vespa.gid }}
+        fsGroup: {{ .Values.vespa.gid }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - content
+                topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: content
+          image: "{{ .Values.vespa.container.image }}:{{ .Values.vespa.container.tag }}"
+          args: ["services"]     
+          env:
+            - name: VESPA_LOG_STDOUT
+              value: "true"
+            - name: VESPA_UNPRIVILEGED
+              value: "yes"
+            - name: VESPA_CONFIGSERVERS
+              value: {{ include "vespaConfigServers" . }}
+            - name: VESPA_CONFIGPROXY_JVMARGS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}            
+          ports:
+            {{- include "protonPorts" (list . "pod" ) | indent 12 }}
+            {{- include "metricsPorts" (list . "pod" ) | indent 12 }}
+          resources:
+            limits: {{ toYaml .Values.contentserver.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.contentserver.resources.pod.requests | nindent 14 }}
+          volumeMounts:
+            - mountPath: /opt/vespa/var/db
+              name: content-data
+  volumeClaimTemplates:
+  - metadata:
+      name: content-data
+    spec:
+      {{ if (.Values.persistentVolumeClaim).storageClass -}}
+      storageClassName: {{ .Values.persistentVolumeClaim.storageClass }}
+      {{- end }}
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.contentserver.resources.volume.data }}

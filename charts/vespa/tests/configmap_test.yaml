@@ -1,0 +1,30 @@
+---
+templates:
+  - configmap.yaml
+tests:
+  - it: Validate the casting of CPU quota to int
+    values:
+      - ./values/common-values.yaml
+      - ./values/contentserver-int-limits-values.yaml
+    asserts:
+      - matchRegex: 
+          path: data['services.xml']
+          pattern: <search>4</search>
+  ### Validate helper functions work for floats
+  - it: Validate the casting of CPU quota to int
+    values:
+      - ./values/common-values.yaml
+      - ./values/contentserver-float-limits-values.yaml
+    asserts:
+      - matchRegex: 
+          path: data['services.xml']
+          pattern: ".*<search>4.*"
+  ### Validate helper functions work for strings
+  - it: Validate the casting of CPU quota to int
+    values:
+      - ./values/common-values.yaml
+      - ./values/contentserver-string-limits-values.yaml
+    asserts:
+      - matchRegex: 
+          path: data['services.xml']
+          pattern: ".*<search>4.*"

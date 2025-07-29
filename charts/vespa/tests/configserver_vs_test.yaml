@@ -1,0 +1,35 @@
+---
+templates:
+  - configserver-vs.yaml
+tests:
+### Tests for the common configuration
+  - it: configserver-vs configuration should be valid
+    values:
+      - ./values/common-values.yaml
+      - ./values/configserver-values.yaml
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: metadata.name
+          value: vs-config-vespa-ns-cluster-vespa
+      - equal:
+          path: metadata.labels.app
+          value: vespa-config
+      - equal:
+          path: metadata.namespace
+          value: vespa-ns
+      - contains:
+          path: spec.gateways
+          content: gateway-config-vespa-ns-cluster-vespa-dev
+      - contains:
+          path: spec.hosts
+          content: config-vespa-ns-cluster-dev.k8s.companyname.net
+      - equal:
+          path: spec.http[0].route[0].destination.host
+          value: config
+      - equal:
+          path: spec.http[0].route[0].destination.port.number
+          value: 19071
+              
+      

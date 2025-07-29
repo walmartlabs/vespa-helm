@@ -1,0 +1,23 @@
+---
+
+configserver:
+  virtualService:
+    enabled: false
+
+feedcontainer:
+  virtualService:
+    enabled: true
+
+querycontainer:
+  virtualService:
+    enabled: false
+
+vispana:
+  virtualService:
+    enabled: false    
+
+istio:
+  feedcontainer:
+    ingressGatewayLabelSelector: 
+      istio: notrealingress2
+      app: istio-notrealingressgateway2

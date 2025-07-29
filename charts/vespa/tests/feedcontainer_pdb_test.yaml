@@ -1,0 +1,47 @@
+---
+templates:
+  - feedcontainer-pdb.yaml
+tests:
+### Tests for the common configuration
+  - it: feedcontainer PDB configuration % based
+    values:
+      - ./values/common-values.yaml
+      # taking the base values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-feed-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: feed
+      - equal:
+          path: spec.minAvailable
+          value: 60%
+  - it: feedcontainer PDB configuration should be euqal to 2
+    values:
+      - ./values/common-values.yaml
+      - ./values/feedcontainer-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-feed-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: feed
+      - equal:
+          path: spec.minAvailable
+          value: 2
+  - it: feedcontainer PDB configuration should be equal to minAvailable
+    values:
+      - ./values/common-values.yaml
+      - ./values/feedcontainer-pdb-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-feed-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: feed
+      - equal:
+          path: spec.minAvailable
+          value: 3

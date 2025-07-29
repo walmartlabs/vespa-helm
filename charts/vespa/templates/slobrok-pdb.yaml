@@ -1,0 +1,18 @@
+{{- if .Values.slobrok.pdb.enabled -}}
+  {{- if ( gt ( int .Values.slobrok.replicas ) 1 ) -}}
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.deployEnv }}-slobrok-pdb
+spec:
+  minAvailable: {{ include "pdbMinPods" ( list .Values.slobrok.replicas .Values.slobrok.pdb.thresholds.minPodsPercentage .Values.slobrok.pdb.thresholds.minPodsCount ) }}
+  selector:
+    matchLabels: 
+      app: slobrok
+  {{- end -}}
+{{- end -}}

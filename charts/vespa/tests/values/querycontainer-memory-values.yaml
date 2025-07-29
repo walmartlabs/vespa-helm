@@ -1,0 +1,4 @@
+---
+querycontainer:
+  resources:
+    memoryStorageLimit: 20Gi

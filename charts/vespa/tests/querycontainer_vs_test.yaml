@@ -1,0 +1,35 @@
+---
+templates:
+  - querycontainer-vs.yaml
+tests:
+### Tests for the common configuration
+  - it: querycontainer-vs configuration should be valid
+    values:
+      - ./values/common-values.yaml
+      - ./values/querycontainer-values.yaml
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: metadata.name
+          value: vs-query-vespa-ns-cluster-vespa
+      - equal:
+          path: metadata.labels.app
+          value: vespa-query
+      - equal:
+          path: metadata.namespace
+          value: vespa-ns
+      - contains:
+          path: spec.gateways
+          content: gateway-query-vespa-ns-cluster-vespa
+      - contains:
+          path: spec.hosts
+          content: query-vespa-ns-cluster-dev.k8s.companyname.net
+      - equal:
+          path: spec.http[0].route[0].destination.host
+          value: query
+      - equal:
+          path: spec.http[0].route[0].destination.port.number
+          value: 8080
+              
+      

@@ -1,0 +1,19 @@
+---
+apiVersion: "v2"
+name: "vespa"
+version: 0.1.0
+description: "Helm chart to deploy Vespa clusters to a K8s cluster"
+keywords:
+  - Vespa
+  - Vector Database
+  - Infrastructure
+maintainers:
+  - name: walmart
+    email: info@walmart.com
+    url: https://github.com/walmartlabs/vespa-helm
+icon: https://github.com/walmartlabs/vespa-helm/logo.svg
+home: https://github.com/walmartlabs/vespa-helm
+type: application
+sources:
+  - "https://github.com/walmartlabs/vespa-helm"
+appVersion: v0.1.0

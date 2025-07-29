@@ -1,0 +1,24 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: config-svc-mon
+  namespace: {{ .Values.namespace }}
+  labels:
+    companyname.com/prometheus: infrastructure
+spec:
+  selector:
+    matchLabels:
+      app: config-hs
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.namespace }}
+  endpoints:
+    - targetPort: 19092 #metrics port on headless services
+      path: /prometheus/v1/values
+{{- end }}

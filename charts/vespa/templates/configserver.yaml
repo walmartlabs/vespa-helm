@@ -1,0 +1,162 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: config
+  labels:
+    app: config
+spec:
+  publishNotReadyAddress: true
+  ports:
+    - name: cf-port-1
+      port: {{ .Values.configserver.ports.port1 }}      
+    - name: cf-port-2
+      port: 19070
+    - name: cf-port-3
+      port: 19050
+    # https://github.com/vespa-engine/vespa/blob/master/configdefinitions/src/vespa/zookeeper-server.def
+    - name: zk-client
+      port: 2181
+    - name: zk-quorum
+      port: 2182
+    - name: zk-election
+      port: 2183
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: config
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-hs
+  labels:
+    app: config-hs
+spec:
+  publishNotReadyAddress: true
+  clusterIP: None
+  ports:
+    - name: cf-port-1
+      port: {{ .Values.configserver.ports.port1 }}      
+    - name: cf-port-2
+      port: 19070
+    - name: cf-port-3
+      port: 19050
+    # https://github.com/vespa-engine/vespa/blob/master/configdefinitions/src/vespa/zookeeper-server.def
+    - name: zk-client
+      port: 2181
+    - name: zk-quorum
+      port: 2182
+    - name: zk-election
+      port: 2183
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: config
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: config
+  labels:
+    app: config
+spec:
+  updateStrategy:
+    type: {{ .Values.configserver.updateStrategy }}
+  podManagementPolicy: {{ .Values.configserver.podManagementPolicy }}
+  replicas: {{ .Values.configserver.replicas }}
+  selector:
+    matchLabels:
+      app: config
+  serviceName: config-hs
+  template:
+    metadata:
+      labels:
+        app: config       
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - config
+                topologyKey: "kubernetes.io/hostname"
+      securityContext:
+        runAsUser: {{ .Values.vespa.uid }}
+        runAsGroup: {{ .Values.vespa.gid }}
+        fsGroup: {{ .Values.vespa.gid }}
+      containers:
+        - name: config
+          image: "{{ .Values.vespa.container.image }}:{{ .Values.vespa.container.tag }}"
+          env:
+            - name: VESPA_LOG_STDOUT
+              value: "true"
+            - name: VESPA_UNPRIVILEGED
+              value: "yes"
+            - name: VESPA_CONFIGSERVERS
+              value: {{ include "vespaConfigServers" . }}
+            - name: VESPA_CONFIGSERVER_JVMARGS
+              value: "-Xms{{ .Values.configserver.resources.java.minHeap }} -Xmx{{ .Values.configserver.resources.java.maxHeap }} -Dsun.net.inetaddr.ttl=0"
+            - name: VESPA_CONFIGPROXY_JVMARGS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+          ports:
+            - name: cf-port-1
+              containerPort: {{ .Values.configserver.ports.port1 }}
+            - name: cf-port-2
+              containerPort: 19070
+            - name: cf-port-3
+              containerPort: 19050
+            - name: zk-client
+              containerPort: 2181
+            - name: zk-quorum
+              containerPort: 2182
+            - name: zk-election
+              containerPort: 2183
+            {{- include "metricsPorts" (list . "pod" ) | indent 12 }}
+          resources:
+            limits: {{ toYaml .Values.configserver.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.configserver.resources.pod.requests | nindent 14 }}
+          volumeMounts:
+            # https://docs.vespa.ai/en/operations/docker-containers.html
+            - mountPath: /opt/vespa/var
+              name: configserver-data
+            - mountPath: /opt/vespa/logs
+              name: configserver-log
+  volumeClaimTemplates:
+    - metadata:
+        name: configserver-data
+      spec:
+        {{ if ((.Values).persistentVolumeClaim).storageClass -}}
+        storageClassName: {{ .Values.persistentVolumeClaim.storageClass }}
+        {{- end }}
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ .Values.configserver.resources.volume.data }}
+    - metadata:
+        name: configserver-log
+      spec:
+        {{ if ((.Values).persistentVolumeClaim).storageClass -}}
+        storageClassName: {{ .Values.persistentVolumeClaim.storageClass }}
+        {{- end }}
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ .Values.configserver.resources.volume.log }}

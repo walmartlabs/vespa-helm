@@ -1,0 +1,29 @@
+{{ if .Values.querycontainer.virtualService.enabled }}
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  labels:
+    app: vespa-query
+    version: v1
+  name: vs-query-{{ .Values.clusterName }}-vespa
+  namespace: {{ .Values.namespace }}
+spec:
+  gateways:
+    - gateway-query-{{ .Values.clusterName }}-vespa
+  hosts:
+    - query-{{ include "dnsHostname" . }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: query
+            port:
+              number: {{ .Values.querycontainer.ports.port1 }}
+{{ end }}

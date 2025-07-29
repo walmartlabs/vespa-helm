@@ -1,0 +1,8 @@
+---
+feedcontainer:
+  replicas: 4
+  pdb:
+    enabled: true
+    thresholds: #Note: When replicas > 5 minPercentage is used. When Replicas <= 5 minPodsCount is used.
+      minPodsCount: 3
+      minPodsPercentage: 60%

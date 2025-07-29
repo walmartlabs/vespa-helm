@@ -1,0 +1,47 @@
+---
+templates:
+  - configserver-pdb.yaml
+tests:
+### Tests for the common configuration
+  - it: configserver PDB configuration should be 1
+    values:
+      - ./values/common-values.yaml
+      # taking the base values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-config-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: config
+      - equal:
+          path: spec.minAvailable
+          value: 1
+  - it: configserver PDB configuration should be 3
+    values:
+      - ./values/common-values.yaml
+      - ./values/configserver-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-config-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: config
+      - equal:
+          path: spec.minAvailable
+          value: 2
+  - it: configserver PDB configuration should be 50%
+    values:
+      - ./values/common-values.yaml
+      - ./values/configserver-pdb-values.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: dev-config-pdb
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: config
+      - equal:
+          path: spec.minAvailable
+          value: 50%

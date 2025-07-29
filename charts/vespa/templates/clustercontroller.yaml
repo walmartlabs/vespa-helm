@@ -1,0 +1,118 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster
+  labels:
+    app: cluster
+spec:
+  publishNotReadyAddress: true
+  ports:
+    - name: cc-port-1
+      port: {{ .Values.clustercontroller.ports.port1 }}      
+    - name: cc-port-2
+      port: 19070
+    - name: cc-port-3
+      port: 19050
+    {{- include "clusterControllerPorts" (list . "service" ) | indent 4 }}
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: cluster
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-hs
+  labels:
+    app: cluster-hs
+spec:
+  publishNotReadyAddress: true
+  clusterIP: None
+  ports:
+    - name: cc-port-1
+      port: {{ .Values.clustercontroller.ports.port1 }}      
+    - name: cc-port-2
+      port: 19070
+    - name: cc-port-3
+      port: 19050
+    {{- include "clusterControllerPorts" (list . "service" ) | indent 4 }}
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+    # https://github.com/vespa-engine/vespa/blob/master/configdefinitions/src/vespa/zookeeper-server.def
+  selector:
+    app: cluster
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cluster
+  labels:
+    app: cluster
+spec:
+  updateStrategy:
+    type: {{ .Values.clustercontroller.updateStrategy }}
+  podManagementPolicy: {{ .Values.clustercontroller.podManagementPolicy }}
+  replicas: {{ .Values.clustercontroller.replicas }}
+  selector:
+    matchLabels:
+      app: cluster
+  serviceName: cluster-hs
+  template:
+    metadata:
+      labels:
+        app: cluster
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - cluster
+                topologyKey: "kubernetes.io/hostname"
+      securityContext:
+        runAsUser: {{ .Values.vespa.uid }}
+        runAsGroup: {{ .Values.vespa.gid }}
+        fsGroup: {{ .Values.vespa.gid }}
+      containers:
+        - name: cluster
+          image: "{{ .Values.vespa.container.image }}:{{ .Values.vespa.container.tag }}"
+          args: ["services"]
+          env:
+            - name: VESPA_LOG_STDOUT
+              value: "true"
+            - name: VESPA_UNPRIVILEGED
+              value: "yes"
+            - name: VESPA_CONFIGSERVERS
+              value: {{ include "vespaConfigServers" . }}
+            - name: VESPA_CONFIGPROXY_JVMARGS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+          ports:
+            - name: cc-port-1
+              containerPort: {{ .Values.clustercontroller.ports.port1 }}
+            - name: cc-port-2
+              containerPort: 19070
+            - name: cc-port-3
+              containerPort: 19050
+            {{- include "clusterControllerPorts" (list . "pod" ) | indent 12 }}
+            {{- include "metricsPorts" (list . "pod" ) | indent 12 }}
+          resources:
+            limits: {{ toYaml .Values.clustercontroller.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.clustercontroller.resources.pod.requests | nindent 14 }}

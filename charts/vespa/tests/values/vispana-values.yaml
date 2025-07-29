@@ -1,0 +1,16 @@
+---
+vispana:
+  container:
+    image: docker.io/vispana/vispana
+    tag: 1.4.0
+  replicas: 1
+  ports:
+    port1: 4000
+  resources:
+    pod:
+      requests:
+        cpu: 2
+        memory: 4096Mi
+      limits:
+        cpu: 2
+        memory: 4096Mi

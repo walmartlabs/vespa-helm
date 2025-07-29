@@ -1,0 +1,110 @@
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: query
+  labels:
+    app: query
+spec:
+  ports:
+    - name: query-port-1
+      port: {{ .Values.querycontainer.ports.port1 }}  
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: query
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: v1
+kind: Service
+metadata:
+  name: query-hs
+  labels:
+    app: query-hs
+spec:
+  clusterIP: None
+  ports:
+    - name: query-port-1
+      port: {{ .Values.querycontainer.ports.port1 }}  
+    {{- include "metricsPorts" (list . "service" ) | indent 4 }}
+  selector:
+    app: query
+---
+# Copyright (c) Walmart Inc.
+
+# This source code is licensed under the Apache 2.0 license found in the
+# LICENSE file in the root directory of this source tree.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: query
+  labels:
+    app: query
+spec:
+  replicas: {{ .Values.querycontainer.replicas }}
+  selector:
+    matchLabels:
+      app: query
+  serviceName: query-hs
+  template:
+    metadata:
+      labels:
+        app: query
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.vespa.uid }}
+        runAsGroup: {{ .Values.vespa.gid }}
+        fsGroup: {{ .Values.vespa.gid }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - query
+                topologyKey: "kubernetes.io/hostname"
+      {{ if .Values.querycontainer.resources.memoryStorageLimit -}}
+      volumes:
+        - name: memory-storage
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.querycontainer.resources.memoryStorageLimit }}
+      {{- end }}
+      containers:
+        - name: query
+          image: "{{ .Values.vespa.container.image }}:{{ .Values.vespa.container.tag }}"
+          args: ["services"]
+          env:
+            - name: VESPA_LOG_STDOUT
+              value: "true"
+            - name: VESPA_UNPRIVILEGED
+              value: "yes"
+            - name: VESPA_CONFIGSERVERS
+              value: {{ include "vespaConfigServers" . }}
+            - name: VESPA_CONFIGPROXY_JVMARGS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.vespa.generalJavaOpts | quote }}
+          ports:
+            - name: query-port-1
+              containerPort: {{ .Values.querycontainer.ports.port1 }}  
+            {{- include "metricsPorts" (list . "pod" ) | indent 12 }}
+          resources:
+            limits: {{ toYaml .Values.querycontainer.resources.pod.limits | nindent 14 }}
+            requests: {{ toYaml .Values.querycontainer.resources.pod.requests | nindent 14 }}
+          livenessProbe: {{ toYaml .Values.vespa.livenessProbe | trim | nindent 12 }}
+          {{ if .Values.querycontainer.resources.memoryStorageLimit -}}
+          volumeMounts:
+            - mountPath: /opt/vespa/var
+              name: memory-storage
+          {{- end -}}

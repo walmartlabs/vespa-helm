@@ -1,0 +1,47 @@
+---
+templates:
+  - configserver-gateway.yaml
+tests:
+### Tests for NOT rendering if VS is disabled
+  - it: gateway config should not render
+    values:
+      - ./values/common-values.yaml
+      - ./values/all-gateway-disabled-values.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+### Tests for the common configuration
+  - it: configserver gateway configuration should be valid
+    values:
+      - ./values/common-values.yaml
+      - ./values/configserver-gateway-values.yaml
+    asserts:
+    #Testing the first document
+      - equal:
+          path: metadata.name
+          value: gateway-config-vespa-ns-cluster-vespa
+      - equal:
+          path: metadata.labels.app
+          value: vespa-ns-cluster-vespa
+      - equal:
+          path: metadata.namespace
+          value: vespa-ns
+      - contains:
+          path: spec.servers[0].hosts
+          content: config-vespa-ns-cluster-dev.k8s.companyname.net
+      - contains:
+          path: spec.servers[1].hosts
+          content: config-vespa-ns-cluster-dev.k8s.companyname.net
+      - equal:
+          path: spec.servers[1].port.name
+          value: https-gateway-vespa-ns-cluster-vespa
+      - equal:
+          path: spec.servers[1].tls.credentialName
+          value: vespa-ns-cluster-dev.k8s.companyname.net             
+      - isKind:
+          of: Gateway
+      - equal:
+          path: spec.selector
+          value:
+            istio: notrealingress
+            app: istio-notrealingressgateway

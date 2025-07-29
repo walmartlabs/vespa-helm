@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<services version="1.0" xmlns:deploy="vespa" xmlns:preprocess="properties">
+
+    <admin version="2.0">
+        <configservers>
+            <configserver hostalias="config-0" />
+            <configserver hostalias="config-1" />
+            <configserver hostalias="config-2" />
+        </configservers>
+        <slobroks>
+            <slobrok hostalias="config-0" />
+            <slobrok hostalias="config-1" />
+            <slobrok hostalias="config-2" />
+        </slobroks>
+
+        <adminserver hostalias="admin-0" />
+    </admin>
+
+    <container id="feed" version="1.0">
+        <document-api/>
+        <document-processing/>
+        <nodes>
+            <node hostalias="feed-0" />
+            <node hostalias="feed-1" />
+        </nodes>
+    </container>
+
+    <container id="query" version="1.0">
+        <search/>
+        <nodes>
+            <node hostalias="query-0" />
+            <node hostalias="query-1" />
+        </nodes>
+    </container>
+
+</services>

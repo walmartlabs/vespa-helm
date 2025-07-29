@@ -1,0 +1,4 @@
+---
+contentserver:
+  limits:
+    cpu: 2

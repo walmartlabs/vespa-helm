@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<hosts>
+  <host name="config-0.config-hs.music-vespa.svc.cluster.local">
+    <alias>config-0</alias>
+  </host>
+
+  <host name="config-1.config-hs.music-vespa.svc.cluster.local">
+    <alias>config-1</alias>
+  </host>
+
+  <host name="config-2.config-hs.music-vespa.svc.cluster.local">
+    <alias>config-2</alias>
+  </host>
+
+  <host name="admin-0.admin-hs.music-vespa.svc.cluster.local">
+    <alias>admin-0</alias>
+  </host>
+
+  <host name="feed-0.feed-hs.music-vespa.svc.cluster.local">
+    <alias>feed-0</alias>
+  </host>
+  <host name="feed-1.feed-hs.music-vespa.svc.cluster.local">
+    <alias>feed-1</alias>
+  </host>
+
+  <host name="query-0.query-hs.music-vespa.svc.cluster.local">
+    <alias>query-0</alias>
+  </host>
+  <host name="query-1.query-hs.music-vespa.svc.cluster.local">
+    <alias>query-1</alias>
+  </host>
+
+  <host name="content-0.content-hs.music-vespa.svc.cluster.local">
+    <alias>content-0</alias>
+  </host>
+  <host name="content-1.content-hs.music-vespa.svc.cluster.local">
+    <alias>content-1</alias>
+  </host>
+  
+</hosts>
