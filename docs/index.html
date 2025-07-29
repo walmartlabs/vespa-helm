@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vespa Helm Charts</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .code-block {
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+            font-size: 14px;
+        }
+
+        .chart-info {
+            background: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 16px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Vespa Helm Charts Repository</h1>
+        <p>Official Helm charts for deploying Vespa to Kubernetes</p>
+    </div>
+
+    <h2>🚀 Quick Start</h2>
+
+    <h3>Add the Helm Repository</h3>
+    <div class="code-block">
+        helm repo add vespa https://walmartlabs.github.io/vespa-helm<br>
+        helm repo update
+    </div>
+
+    <h3>Install Vespa</h3>
+    <div class="code-block">
+        # Install with default values<br>
+        helm install my-vespa vespa/vespa<br><br>
+        # Install with custom values<br>
+        helm install my-vespa vespa/vespa -f my-values.yaml
+    </div>
+
+    <div class="chart-info">
+        <h3>📋 Available Charts</h3>
+        <ul>
+            <li><strong>vespa</strong> - Complete Vespa deployment with all components</li>
+        </ul>
+    </div>
+
+    <h2>📚 Documentation</h2>
+    <p>For detailed installation instructions, configuration options, and examples, visit the <a
+            href="https://github.com/walmartlabs/vespa-helm">GitHub repository</a>.</p>
+
+    <h2>🔧 Prerequisites</h2>
+    <ul>
+        <li>Kubernetes cluster</li>
+        <li>Helm 3.x</li>
+        <li>Istio service mesh</li>
+    </ul>
+
+    <h2>📝 Configuration</h2>
+    <p>The chart supports extensive configuration through values.yaml. Key configuration areas include:</p>
+    <ul>
+        <li>Vespa schemas and indexing</li>
+        <li>Resource allocation and scaling</li>
+        <li>Istio integration and ingress</li>
+        <li>Persistent storage configuration</li>
+        <li>Monitoring and metrics</li>
+    </ul>
+
+    <h2>🤝 Contributing</h2>
+    <p>Contributions are welcome! Please see the <a
+            href="https://github.com/walmartlabs/vespa-helm/blob/main/README.md">README</a> for development
+        instructions.</p>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
+        <p>Maintained by <a href="https://github.com/walmartlabs">Walmart Labs</a></p>
+    </footer>
+</body>
+
+</html>

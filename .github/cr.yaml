@@ -1,0 +1,8 @@
+owner: walmartlabs
+git-repo: vespa-helm
+charts-repo-url: https://walmartlabs.github.io/vespa-helm
+target-branch: gh-pages
+remote: origin
+generate-release-notes: true
+release-name-template: "{{ .Name }}-{{ .Version }}"
+skip-existing: true
