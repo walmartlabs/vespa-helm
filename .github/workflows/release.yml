@@ -12,8 +12,6 @@ jobs:
   release:
     permissions:
       contents: write
-      pages: write
-      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,9 +29,11 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Add dependency chart repos
+      - name: Install chart-releaser
         run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
+          wget https://github.com/helm/chart-releaser/releases/download/v1.6.1/chart-releaser_1.6.1_linux_amd64.tar.gz
+          tar -xzf chart-releaser_1.6.1_linux_amd64.tar.gz
+          sudo mv cr /usr/local/bin/cr
 
       - name: Check if gh-pages branch exists
         id: check-branch
@@ -87,3 +87,4 @@ jobs:
           charts_dir: charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
