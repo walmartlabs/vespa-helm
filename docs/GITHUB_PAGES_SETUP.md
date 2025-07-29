@@ -9,14 +9,38 @@ This document explains how to enable GitHub Pages for the Vespa Helm chart repos
 ## Setup Steps
 
 ### 1. Push the Workflow Files
-**IMPORTANT**: The GitHub Actions workflow files must be pushed to the repository first:
+**IMPORTANT**: The GitHub Actions workflow files must be pushed to the repository first.
 
+**Option A: If you have admin access (can bypass branch protection):**
 ```bash
 # Add and commit the workflow files
 git add .github/workflows/release.yml .github/cr.yaml docs/
 git commit -m "Add GitHub Pages Helm chart repository setup"
 git push origin main
 ```
+
+**Option B: If you have branch protection rules (recommended approach):**
+```bash
+# Create a feature branch
+git checkout -b setup-helm-repository
+
+# Add and commit the workflow files
+git add .github/workflows/release.yml .github/cr.yaml docs/
+git commit -m "Add GitHub Pages Helm chart repository setup"
+
+# Push the feature branch
+git push origin setup-helm-repository
+
+# Then create a Pull Request on GitHub:
+# 1. Go to https://github.com/walmartlabs/vespa-helm
+# 2. Click "Compare & pull request" (should appear after pushing)
+# 3. Add title: "Setup GitHub Pages Helm chart repository"
+# 4. Add description explaining the changes
+# 5. Click "Create pull request"
+# 6. Review and merge the PR
+```
+
+**Note**: If you're a repository admin and the commit was already pushed (you'll see "Bypassed rule violations"), you can proceed to the next step.
 
 ### 2. Enable GitHub Pages
 1. Go to your repository on GitHub: https://github.com/walmartlabs/vespa-helm
@@ -39,9 +63,11 @@ The workflow will automatically run when you push changes to charts, but you can
 
 1. Go to **Actions** tab
 2. Select **Release Charts** workflow (this should now be visible after pushing the workflow files)
-3. Click **Run workflow**
+3. Click **Run workflow** button (this appears because of the `workflow_dispatch` trigger)
 4. Choose the `main` branch
 5. Click **Run workflow**
+
+**Note**: If you don't see the "Run workflow" button, ensure the updated workflow file with `workflow_dispatch` trigger has been pushed to the repository.
 
 ### 5. Verify Setup
 After the workflow completes:
