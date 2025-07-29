@@ -14,7 +14,7 @@ This document explains how to enable GitHub Pages for the Vespa Helm chart repos
 **Option A: If you have admin access (can bypass branch protection):**
 ```bash
 # Add and commit the workflow files
-git add .github/workflows/release.yml .github/cr.yaml docs/
+git add .github/workflows/release.yml docs/
 git commit -m "Add GitHub Pages Helm chart repository setup"
 git push origin main
 ```
@@ -25,7 +25,7 @@ git push origin main
 git checkout -b setup-helm-repository
 
 # Add and commit the workflow files
-git add .github/workflows/release.yml .github/cr.yaml docs/
+git add .github/workflows/release.yml docs/
 git commit -m "Add GitHub Pages Helm chart repository setup"
 
 # Push the feature branch
