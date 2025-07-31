@@ -1,7 +1,7 @@
 ---
 apiVersion: "v2"
 name: "vespa"
-version: 0.1.0
+version: 0.1.1
 description: "Helm chart to deploy Vespa clusters to a K8s cluster"
 keywords:
   - Vespa

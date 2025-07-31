@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - 'charts/**'
-  workflow_dispatch:  # This enables the "Run workflow" button
+  workflow_dispatch:
 
 jobs:
   release:
     permissions:
       contents: write
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,62 +31,63 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Install chart-releaser
+      - name: Check for chart changes
+        id: changes
         run: |
-          wget https://github.com/helm/chart-releaser/releases/download/v1.6.1/chart-releaser_1.6.1_linux_amd64.tar.gz
-          tar -xzf chart-releaser_1.6.1_linux_amd64.tar.gz
-          sudo mv cr /usr/local/bin/cr
-
-      - name: Check if gh-pages branch exists
-        id: check-branch
-        run: |
-          if git ls-remote --exit-code --heads origin gh-pages; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
+          # Check if there are any charts to process
+          if [ ! -d "charts" ] || [ -z "$(find charts -name "Chart.yaml" -type f)" ]; then
+            echo "No charts found in charts/ directory"
+            exit 1
           fi
+          
+          # List charts for debugging
+          echo "Found charts:"
+          find charts -name "Chart.yaml" -type f | xargs -I {} dirname {}
 
-      - name: Create gh-pages branch if it doesn't exist
-        if: steps.check-branch.outputs.exists == 'false'
+      - name: Ensure gh-pages branch exists and is accessible
         run: |
-          git checkout --orphan gh-pages
-          git rm -rf .
-          # Create a simple index.html
-          cat > index.html << 'EOF'
+          # Check if gh-pages branch exists remotely
+          if ! git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            echo "Creating initial gh-pages branch..."
+            # Create and push an initial gh-pages branch
+            git checkout --orphan gh-pages
+            git rm -rf .
+            
+            # Create minimal index.yaml
+            cat > index.yaml << 'EOF'
+          apiVersion: v1
+          entries: {}
+          generated: "2024-01-01T00:00:00Z"
+          EOF
+            
+            # Create index.html
+            cat > index.html << 'EOF'
           <!DOCTYPE html>
           <html>
-          <head>
-            <title>Vespa Helm Charts</title>
-            <style>
-              body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-              .code { background: #f4f4f4; padding: 10px; border-radius: 5px; font-family: monospace; }
-            </style>
-          </head>
+          <head><title>Vespa Helm Charts</title></head>
           <body>
-            <h1>🚀 Vespa Helm Charts Repository</h1>
-            <p>Add this repository to Helm:</p>
-            <div class="code">helm repo add vespa https://walmartlabs.github.io/vespa-helm</div>
-            <p>Install Vespa:</p>
-            <div class="code">helm install my-vespa vespa/vespa</div>
-            <p><a href="https://github.com/walmartlabs/vespa-helm">📚 Documentation</a></p>
+            <h1>Vespa Helm Charts Repository</h1>
+            <p>Repository is being set up...</p>
           </body>
           </html>
           EOF
-          # Create initial index.yaml
-          cat > index.yaml << 'EOF'
-          apiVersion: v1
-          entries: {}
-          generated: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          EOF
-          git add index.html index.yaml
-          git commit -m "Initial gh-pages commit"
-          git push origin gh-pages
-          git checkout main
+            
+            git add index.yaml index.html
+            git commit -m "Initialize gh-pages branch"
+            git push origin gh-pages
+            git checkout main
+            
+            echo "✅ gh-pages branch created successfully"
+          else
+            echo "✅ gh-pages branch already exists"
+          fi
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         with:
           charts_dir: charts
+          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_SKIP_EXISTING: true
 
