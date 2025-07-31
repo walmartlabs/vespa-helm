@@ -15,14 +15,214 @@ Please refer to Helm's [documentation](https://helm.sh/docs/) on how to get star
 $ brew install helm
 ```
 
-Once Helm is set up properly, add the repo as follows:
+Once Helm is set up properly, add the repository and install the chart:
+
 ```bash
-$ helm repo add vespa https://walmart.github.io/vespa-helm
-$ helm install vespa
+# Add the Vespa Helm repository
+$ helm repo add vespa https://walmartlabs.github.io/vespa-helm
+$ helm repo update
+
+# Install Vespa with default values
+$ helm install my-vespa vespa/vespa
+
+# Or install with custom values
+$ helm install my-vespa vespa/vespa -f my-values.yaml
 ```
 
-[Istio]() should be configured on the Kubernetes cluster in order to deploy Vespa. 
-Please refer to Istio's [documentation](https://istio.io/latest/docs/setup/) on how to setup Istio control plane on Kubernetes. 
+**Alternative: Install from source**
+
+If you prefer to install directly from the source repository:
+
+```bash
+# Clone the repository
+$ git clone https://github.com/walmartlabs/vespa-helm.git
+$ cd vespa-helm
+
+# Install the chart from local files
+$ helm install my-vespa ./charts/vespa -f my-values.yaml
+```
+
+## Istio Installation
+
+[Istio](https://istio.io/) should be configured on the Kubernetes cluster in order to deploy Vespa. 
+This chart uses Istio for service mesh capabilities including ingress gateways, virtual services, and traffic management.
+
+### Prerequisites
+- Kubernetes cluster
+- kubectl configured to access your cluster
+- Helm 3.x installed
+
+### Installation Steps
+
+1. **Create the Istio system namespace:**
+   ```bash
+   kubectl create namespace istio-system
+   ```
+
+2. **Add the Istio Helm repository:**
+   ```bash
+   helm repo add istio https://istio-release.storage.googleapis.com/charts
+   helm repo update
+   ```
+
+3. **Install Istio base (CRDs and cluster roles):**
+   ```bash
+   helm install istio-base istio/base -n istio-system --set defaultRevision=default
+   ```
+
+4. **Install Istiod (control plane):**
+   
+   For public Docker Hub (recommended for most users):
+   ```bash
+   helm install istiod istio/istiod -n istio-system \
+     --set tag=1.26.2 \
+     --timeout='7200s' \
+     --wait \
+     --debug
+   ```
+   
+   For private registries (enterprise environments):
+   ```bash
+   helm install istiod istio/istiod -n istio-system \
+     --set hub=your-private-registry.com/istio \
+     --set tag=1.26.2 \
+     --timeout='7200s' \
+     --wait \
+     --debug
+   ```
+
+5. **Create Istio Ingress Gateway configuration file (`igw.yaml`):**
+   
+   Choose the appropriate configuration based on your environment:
+   
+   **For public Docker Hub (default):**
+   ```yaml
+   labels:
+     app: istio-ingressgateway
+   # hub: docker.io/istio (uses default)
+   tag: 1.25.3
+
+   service:
+     # For external/public load balancer (AWS, GCP, Azure public)
+     type: LoadBalancer
+     # annotations: {} # Add cloud-specific annotations as needed
+   **For private registry (enterprise environments):**
+   ```yaml
+   labels:
+     app: istio-ingressgateway
+   hub: your-private-registry.com/istio  # Replace with your registry
+   tag: 1.25.3
+
+   service:
+     # For internal/private load balancer
+     type: LoadBalancer
+     annotations:
+       # Azure internal load balancer
+       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+       # AWS internal load balancer
+       # service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+       # GCP internal load balancer  
+       # cloud.google.com/load-balancer-type: "Internal"
+     ports:
+       - name: status-port
+         port: 15021
+         targetPort: 15020 
+         protocol: TCP
+       - name: http2
+         port: 80
+         targetPort: 80
+         protocol: TCP
+       - name: https
+         port: 443
+         targetPort: 443
+         protocol: TCP
+
+   podAnnotations:
+     prometheus.io/scrape: "true"
+     prometheus.io/port: "15020" 
+     prometheus.io/path: "/stats/prometheus"
+
+   resources:
+     requests:
+       cpu: 1000m    # Adjust based on your cluster capacity
+       memory: 1024Mi
+     limits:
+       cpu: 2000m
+       memory: 2048Mi
+   
+   autoscaling:
+     enabled: true
+     minReplicas: 2      # Adjust based on your needs
+     maxReplicas: 10     # Adjust based on your cluster capacity
+     targetCPUUtilizationPercentage: 80
+
+   # Add environment-specific scheduling rules if needed
+   affinity: {}
+   tolerations: []
+   ```
+
+   **Common cloud provider load balancer annotations:**
+   ```yaml
+   # AWS
+   # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+   # service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+   
+   # Azure
+   # service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+   
+   # GCP
+   # cloud.google.com/load-balancer-type: "Internal"
+   ```
+
+6. **Install Istio Ingress Gateway:**
+   ```bash
+   helm install istio-ingressgateway istio/gateway -n istio-system \
+     -f igw.yaml \
+     --timeout='7200s' \
+     --wait \
+     --debug
+   ```
+
+### Verify Installation
+
+After installation, verify that all Istio components are running:
+
+```bash
+kubectl get pods -n istio-system
+```
+
+You should see pods for:
+- `istio-proxy` (injected into application pods)
+- `istiod-*` (control plane)
+- `istio-ingressgateway-*` (ingress gateway)
+
+### Configuration Notes
+
+- **Load Balancer**: Configuration supports both public and internal load balancers depending on your requirements
+  - Public: Remove annotations for external access (default LoadBalancer behavior)
+  - Internal: Add cloud-specific annotations for internal-only access
+- **Docker Images**: 
+  - Default configuration uses public Docker Hub (`docker.io/istio`)
+  - For enterprise environments, configure private registry in the `hub` parameter
+- **Resource allocation**: Adjust CPU/memory requests and limits based on your cluster capacity and expected traffic
+- **Autoscaling**: Configure min/max replicas and CPU thresholds based on your traffic patterns
+- **Prometheus metrics**: Enabled by default on port 15020 for monitoring integration
+
+### Vespa Integration
+
+Once Istio is installed, the Vespa chart will automatically configure:
+- Virtual Services for ingress routing
+- Gateways for external access
+- Service mesh integration for inter-service communication
+
+The ingress gateway label selectors in `values.yaml` are configured to match the Istio ingress gateway:
+```yaml
+istio:
+  configserver:
+    ingressGatewayLabelSelector: 
+      istio: ingressgateway
+      app: istio-ingressgateway
+```
 
 This repository has unit tests for the charts. All charts are also linted.
 
