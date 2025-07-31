@@ -1,32 +1,67 @@
-# Vesp Helm Charts
+# Vespa Helm Charts
 
 Helm chart for deploying Vespa to a Kubernetes cluster.
 
-## Usage
+## Table of Contents
 
-### Prerequisite 
-1. Helm
-2. Istio
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Istio Setup](#istio-setup)
+- [Development](#development)
+- [Features](#features)
+  - [Schema Definitions](#schema-definitions)
+  - [Query Profiles](#query-profiles)
+  - [Memory Backed Storage](#memory-backed-storage)
+- [Contributing](#contributing)
+- [Changelog](#changelog)
 
-[Helm](https://helm.sh) must be installed in order to use the Vespa chart.
-Please refer to Helm's [documentation](https://helm.sh/docs/) on how to get started.
+## Prerequisites
 
+Before installing Vespa, ensure your Kubernetes cluster has the following components:
+
+### 1. **Helm 3.x**
 ```bash
-$ brew install helm
+# Install Helm
+brew install helm
+
+# Verify installation
+helm version
 ```
 
-Once Helm is set up properly, add the repository and install the chart:
+### 2. **cert-manager**
+Required for TLS certificate management:
+```bash
+# Install cert-manager
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --set installCRDs=true
+
+# Verify installation
+kubectl get pods -n cert-manager
+```
+
+### 3. **Istio Service Mesh**
+See detailed [Istio Setup](#istio-setup) instructions below.
+
+---
+
+## Installation
+
+Once all prerequisites are installed, add the repository and install the chart:
 
 ```bash
 # Add the Vespa Helm repository
-$ helm repo add vespa https://walmartlabs.github.io/vespa-helm
-$ helm repo update
+helm repo add vespa https://walmartlabs.github.io/vespa-helm
+helm repo update
 
 # Install Vespa with default values
-$ helm install my-vespa vespa/vespa
+helm install my-vespa vespa/vespa
 
 # Or install with custom values
-$ helm install my-vespa vespa/vespa -f my-values.yaml
+helm install my-vespa vespa/vespa -f my-values.yaml
 ```
 
 **Alternative: Install from source**
@@ -35,14 +70,14 @@ If you prefer to install directly from the source repository:
 
 ```bash
 # Clone the repository
-$ git clone https://github.com/walmartlabs/vespa-helm.git
-$ cd vespa-helm
+git clone https://github.com/walmartlabs/vespa-helm.git
+cd vespa-helm
 
 # Install the chart from local files
-$ helm install my-vespa ./charts/vespa -f my-values.yaml
+helm install my-vespa ./charts/vespa -f my-values.yaml
 ```
 
-## Istio Installation
+## Istio Setup
 
 [Istio](https://istio.io/) should be configured on the Kubernetes cluster in order to deploy Vespa. 
 This chart uses Istio for service mesh capabilities including ingress gateways, virtual services, and traffic management.
@@ -106,6 +141,36 @@ This chart uses Istio for service mesh capabilities including ingress gateways, 
      # For external/public load balancer (AWS, GCP, Azure public)
      type: LoadBalancer
      # annotations: {} # Add cloud-specific annotations as needed
+   ```
+   
+   **For kind/local development (NodePort):**
+   ```yaml
+   labels:
+     app: istio-ingressgateway
+   # hub: docker.io/istio (uses default)
+   tag: 1.25.3
+
+   service:
+     # For kind clusters or local development
+     type: NodePort
+     ports:
+       - name: status-port
+         port: 15021
+         targetPort: 15021
+         nodePort: 30021
+         protocol: TCP
+       - name: http2
+         port: 80
+         targetPort: 8080
+         nodePort: 30080
+         protocol: TCP
+       - name: https
+         port: 443
+         targetPort: 8443
+         nodePort: 30443
+         protocol: TCP
+   ```
+   
    **For private registry (enterprise environments):**
    ```yaml
    labels:
@@ -175,6 +240,8 @@ This chart uses Istio for service mesh capabilities including ingress gateways, 
    ```
 
 6. **Install Istio Ingress Gateway:**
+   
+   For cloud environments (LoadBalancer):
    ```bash
    helm install istio-ingressgateway istio/gateway -n istio-system \
      -f igw.yaml \
@@ -224,6 +291,8 @@ istio:
       app: istio-ingressgateway
 ```
 
+## Development
+
 This repository has unit tests for the charts. All charts are also linted.
 
 ### Linting
@@ -231,7 +300,7 @@ This repository has unit tests for the charts. All charts are also linted.
 Linting is done with `helm lint`. To lint all charts:
 
 ```bash
-$ make lint
+make lint
 ```
 
 ### Unit tests
@@ -241,21 +310,23 @@ Unit tests are in the `./test` directory.
 To run the tests:
 
 ```bash
-$ make test
+make test
 ```
 
 ### Rendering template
 To render the current changes of templates
 
 ```bash
-$ make render
+make render
 ```
 
 ## Features
 
-### Embedded application package deployments
+### Embedded Application Package Deployments
 
-#### Schema definitions 
+The Vespa helm chart has the option to easily include an application package on the configserver, eliminating the need for having to build an application package docker image.
+
+#### Schema Definitions 
 
 Schema's can be configured within the `vespa.schemas` section of the helm values.
 
@@ -345,3 +416,33 @@ feedcontainer:
 ```
 
 This implementation is only enabled when the  `memoryStorageLimit` configuration is present. If not, it will default to the k8s node local disk usage.
+
+## Contributing
+
+We welcome contributions to the Vespa Helm Charts project! Please see our [Contributing Guide](CONTRIBUTING.md) for detailed information on:
+
+- Development workflow
+- Commit conventions for automated changelog generation
+- Testing requirements
+- Pull request process
+
+### Quick Start for Contributors
+
+1. **Fork and clone** the repository
+2. **Create a feature branch** using conventional naming (`feature/your-feature` or `fix/your-fix`)
+3. **Make your changes** following our coding standards
+4. **Test locally** using `make lint` and `make test`
+5. **Commit using conventional commits** (e.g., `feat: add new feature` or `fix: resolve issue`)
+6. **Submit a pull request** with a clear description
+
+### Automated Releases
+
+This project uses automated changelog generation and releases:
+- **Conventional Commits**: Use conventional commit messages for automatic categorization
+- **Automated Changelog**: Changes are automatically documented in [CHANGELOG.md](CHANGELOG.md)
+- **Semantic Versioning**: Releases follow semantic versioning based on commit types
+- **GitHub Releases**: Releases are automatically created with chart packages
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes to this project.
