@@ -1,3 +1,26 @@
 apiVersion: v1
-entries: {}
-generated: "2024-01-01T00:00:00Z"
+entries:
+  vespa:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2025-07-31T02:12:00.959266475Z"
+    description: Helm chart to deploy Vespa clusters to a K8s cluster
+    digest: 4d7e16d814313bc2d0c135d30e5e8e6ca5a68ded4c7247a4630626e1d183bcb0
+    home: https://github.com/walmartlabs/vespa-helm
+    icon: https://github.com/walmartlabs/vespa-helm/logo.svg
+    keywords:
+    - Vespa
+    - Vector Database
+    - Infrastructure
+    maintainers:
+    - email: info@walmart.com
+      name: walmart
+      url: https://github.com/walmartlabs/vespa-helm
+    name: vespa
+    sources:
+    - https://github.com/walmartlabs/vespa-helm
+    type: application
+    urls:
+    - https://github.com/walmartlabs/vespa-helm/releases/download/vespa-0.1.1/vespa-0.1.1.tgz
+    version: 0.1.1
+generated: "2025-07-31T02:12:00.959276042Z"
