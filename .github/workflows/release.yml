@@ -35,18 +35,14 @@ jobs:
           tar -xzf chart-releaser_1.6.1_linux_amd64.tar.gz
           sudo mv cr /usr/local/bin/cr
 
-      - name: Check if gh-pages branch exists
-        id: check-branch
+      - name: Clean and recreate gh-pages branch
         run: |
+          # Delete existing gh-pages branch if it exists but has wrong content
           if git ls-remote --exit-code --heads origin gh-pages; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            git push origin --delete gh-pages || true
           fi
-
-      - name: Create gh-pages branch if it doesn't exist
-        if: steps.check-branch.outputs.exists == 'false'
-        run: |
+          
+          # Create fresh gh-pages branch
           git checkout --orphan gh-pages
           git rm -rf .
           # Create a simple index.html
@@ -70,8 +66,8 @@ jobs:
           </body>
           </html>
           EOF
-          # Create initial index.yaml
-          cat > index.yaml << 'EOF'
+          # Create initial index.yaml with proper timestamp
+          cat > index.yaml << EOF
           apiVersion: v1
           entries: {}
           generated: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -81,10 +77,21 @@ jobs:
           git push origin gh-pages
           git checkout main
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
-        with:
-          charts_dir: charts
+      - name: Package and release charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          # Package charts
+          mkdir -p .cr-release-packages
+          for chart in charts/*; do
+            if [[ -d "$chart" ]]; then
+              helm package "$chart" --destination .cr-release-packages
+            fi
+          done
+          
+          # Upload to GitHub releases
+          cr upload -o walmartlabs -r vespa-helm --skip-existing
+          
+          # Update index and push to gh-pages
+          cr index -o walmartlabs -r vespa-helm --push
 
