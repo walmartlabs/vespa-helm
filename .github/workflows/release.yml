@@ -34,6 +34,7 @@ jobs:
       - name: Check for chart changes
         id: changes
         run: |
+
           # Check if there are any charts to process
           if [ ! -d "charts" ] || [ -z "$(find charts -name "Chart.yaml" -type f)" ]; then
             echo "No charts found in charts/ directory"
@@ -71,6 +72,7 @@ jobs:
           </body>
           </html>
           EOF
+
             
             git add index.yaml index.html
             git commit -m "Initialize gh-pages branch"
@@ -90,4 +92,5 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_SKIP_EXISTING: true
+
 
