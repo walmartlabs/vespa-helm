@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, reopened, synchronize]
+  # Removed pull_request trigger to avoid issues during PR development
 
 permissions:
   contents: read
@@ -19,5 +18,7 @@ jobs:
     steps:
       - name: Release Drafter
         uses: release-drafter/release-drafter@v6
+        with:
+          config-name: release-drafter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
