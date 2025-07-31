@@ -1,0 +1,97 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+categories:
+  - title: "🚀 Features"
+    labels:
+      - "feature"
+      - "enhancement"
+  - title: "🐛 Bug Fixes"
+    labels:
+      - "fix"
+      - "bugfix"
+      - "bug"
+  - title: "🧰 Maintenance"
+    label: "chore"
+  - title: "📖 Documentation"
+    labels:
+      - "documentation"
+      - "docs"
+  - title: "⚡ Performance"
+    labels:
+      - "performance"
+      - "perf"
+  - title: "🔒 Security"
+    labels:
+      - "security"
+  - title: "💥 Breaking Changes"
+    labels:
+      - "breaking-change"
+      - "breaking"
+
+change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+
+version-resolver:
+  major:
+    labels:
+      - "major"
+      - "breaking-change"
+      - "breaking"
+  minor:
+    labels:
+      - "minor"
+      - "feature"
+      - "enhancement"
+  patch:
+    labels:
+      - "patch"
+      - "fix"
+      - "bugfix"
+      - "bug"
+      - "documentation"
+      - "docs"
+      - "chore"
+      - "security"
+      - "performance"
+      - "perf"
+  default: patch
+
+template: |
+  ## Changes
+
+  $CHANGES
+
+  ## Helm Chart Changes
+
+  This release includes updates to the Vespa Helm chart. To use this version:
+
+  ```bash
+  helm repo add vespa https://walmartlabs.github.io/vespa-helm
+  helm repo update
+  helm install my-vespa vespa/vespa --version $RESOLVED_VERSION
+  ```
+
+autolabeler:
+  - label: "chore"
+    files:
+      - "*.md"
+      - ".github/*"
+      - "docs/*"
+  - label: "bug"
+    branch:
+      - '/fix\/.+/'
+    title:
+      - "/fix/i"
+  - label: "feature"
+    branch:
+      - '/feature\/.+/'
+    title:
+      - "/feat/i"
+  - label: "documentation"
+    files:
+      - "*.md"
+      - "docs/*"
+  - label: "enhancement"
+    title:
+      - "/enhance/i"
+      - "/improve/i"

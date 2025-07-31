@@ -1,0 +1,85 @@
+name: Manual Changelog Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: 'Type of changelog update'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+        - no-version-bump
+
+permissions:
+  contents: write
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Update Chart Version
+        if: inputs.update_type != 'no-version-bump'
+        run: |
+          CHART_FILE="charts/vespa/Chart.yaml"
+          CURRENT_VERSION=$(grep "^version:" $CHART_FILE | cut -d' ' -f2 | tr -d '"')
+          
+          # Parse semantic version
+          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+          
+          case "${{ inputs.update_type }}" in
+            "major")
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            "minor")
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            "patch")
+              patch=$((patch + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$major.$minor.$patch"
+          echo "Updating version from $CURRENT_VERSION to $NEW_VERSION"
+          
+          # Update Chart.yaml
+          sed -i "s/^version: .*/version: $NEW_VERSION/" $CHART_FILE
+          
+          git add $CHART_FILE
+          git commit -m "chore: bump chart version to $NEW_VERSION"
+
+      - name: Generate Changelog
+        run: |
+          # Make script executable and run it
+          chmod +x scripts/generate-changelog.sh
+          ./scripts/generate-changelog.sh
+          
+          # Check if changelog was updated
+          if git diff --name-only | grep -q "CHANGELOG.md"; then
+            echo "📝 Changelog updated"
+            git add CHANGELOG.md
+            git commit -m "chore: update changelog [skip ci]"
+          else
+            echo "ℹ️ No changelog updates needed"
+          fi
+
+      - name: Push changes
+        run: |
+          git push origin main
