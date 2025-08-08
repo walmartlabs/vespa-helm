@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+[0;32m[INFO][0m Generating changelog for version 0.1.1 since vespa-0.1.1
+
+## [vespa-helm-0.1.1](https://github.com/walmartlabs/vespa-helm/releases/tag/v0.1.1) (2025-08-08)
+
+### Added
+- Adding support for generating changelog
+- Adding workflows for changelog and release with conventional commit (#7)
+
+### Fixed
+- Fixing release flow
+- Adding workflows for changelog and release with conventional commit (#7)
 
 ## [vespa-helm-0.1.1](https://github.com/walmartlabs/vespa-helm/releases/tag/v0.1.1) (2025-07-30)
 
