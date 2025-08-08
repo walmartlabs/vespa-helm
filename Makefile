@@ -1,6 +1,6 @@
 REPO_URL = https://github.com/walmartlabs/vespa-helm.git
 
-.PHONY: all lint test render
+.PHONY: all lint test render changelog
 
 .DEFAULT_GOAL := all
 
@@ -17,4 +17,8 @@ test:
 # This is to render the current charts and check if it renders
 render: 
 	helm template charts/vespa/
+
+# This is to generate/update the changelog
+changelog:
+	./scripts/generate-changelog.sh
 
