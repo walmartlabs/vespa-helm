@@ -5,24 +5,64 @@
 
 set -e
 
-# Colors for output
+# Colors for output (use only when stderr is a TTY and NO_COLOR is not set)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
+# Helper to determine if we should use colors
+use_color() {
+    [[ -t 2 && -z "${NO_COLOR:-}" ]]
+}
+
+# Function to print status output (to stderr, so it won't be captured into files)
 print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    if use_color; then
+        echo -e "${GREEN}[INFO]${NC} $1" >&2
+    else
+        echo "[INFO] $1" >&2
+    fi
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    if use_color; then
+        echo -e "${YELLOW}[WARN]${NC} $1" >&2
+    else
+        echo "[WARN] $1" >&2
+    fi
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    if use_color; then
+        echo -e "${RED}[ERROR]${NC} $1" >&2
+    else
+        echo "[ERROR] $1" >&2
+    fi
+}
+
+# Cross-platform in-place sed helper (GNU/BSD)
+sed_inplace() {
+    # $1: sed expression, $2: file
+    if sed --version >/dev/null 2>&1; then
+        sed -r -i "$1" "$2"
+    else
+        sed -E -i '' "$1" "$2"
+    fi
+}
+
+# Strip ANSI escape sequences from a file (idempotent) using awk (portable)
+strip_ansi_from_file() {
+    local file="$1"
+    # Remove escape sequences like ESC[ ... letter
+    awk '{ gsub(/\033\[[0-9;]*[A-Za-z]/, ""); print }' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
+
+# Remove noisy log lines accidentally captured in previous runs (first ~20 header lines)
+remove_noise_lines() {
+    local file="$1"
+    awk 'NR<=20 && $0 ~ /^\[(INFO|WARN|ERROR)\] / { next } { print }' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 }
 
 # Get the latest chart version
@@ -140,6 +180,9 @@ update_changelog() {
     
     # Replace the original file
     mv "$temp_file" "$changelog_file"
+    # Cleanup: remove any ANSI codes and accidental log lines from the header area
+    strip_ansi_from_file "$changelog_file"
+    remove_noise_lines "$changelog_file"
     
     print_status "Updated $changelog_file with version $version"
 }
