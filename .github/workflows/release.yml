@@ -31,6 +31,20 @@ jobs:
         with:
           version: 'latest'
 
+      - name: Generate Changelog for Release
+        run: |
+          # Make script executable and run it
+          chmod +x scripts/generate-changelog.sh
+          ./scripts/generate-changelog.sh
+          
+          # Check if changelog was updated
+          if git diff --name-only | grep -q "CHANGELOG.md"; then
+            echo "📝 Changelog updated for release"
+            cat CHANGELOG.md | head -n 50  # Show first 50 lines of changelog
+          else
+            echo "ℹ️ No changelog updates needed"
+          fi
+
       - name: Check for chart changes
         id: changes
         run: |

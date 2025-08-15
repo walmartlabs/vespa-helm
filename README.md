@@ -438,10 +438,10 @@ We welcome contributions to the Vespa Helm Charts project! Please see our [Contr
 ### Automated Releases
 
 This project uses automated changelog generation and releases:
+- **Pull Request Automation**: Changelogs are automatically generated and added to your PRs
 - **Conventional Commits**: Use conventional commit messages for automatic categorization
-- **Automated Changelog**: Changes are automatically documented in [CHANGELOG.md](CHANGELOG.md)
 - **Semantic Versioning**: Releases follow semantic versioning based on commit types
-- **GitHub Releases**: Releases are automatically created with chart packages
+- **GitHub Releases**: Releases are automatically created with chart packages when chart versions are bumped
 
 ## Changelog
 
